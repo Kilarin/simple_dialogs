@@ -1,0 +1,57 @@
+===Start(3)
+Shiver me timbers, but you caught me by surprise matey!
+What be ye doin here?  Arrrgh!  This be no fit place for land lubbers!
+>name:What is your name
+>arrg:Why do pirates always say Arrrgh?
+>treasure:I'm looking for treasure.  Can you tell me where the treasure is?
+>rude:What's got you so cranky?  Did a beaver chew on your wooden leg?
+>end:Good bye.
+
+===Start
+Arrrgh!  Blow me down and pick me up!
+You snuck up on me lad.  What be ye doin here landlubber?
+>name:What is your name
+>arrg:Why do pirates always say Arrrgh?
+>treasure:I'm looking for treasure.  Can you tell me where the treasure is?
+>rude:What's got you so cranky?  Did a beaver chew on your leg?
+
+===start(5)
+Batten down the hatches, if it ain't a landlubber come to call.  What be you doin here?
+>name:What is your name
+>arrg:Why do pirates always say Arrrgh?
+>treasure:I'm looking for treasure.  Can you tell me where the treasure is?
+>rude:What's got you so cranky?  Did a beaver chew on your leg?
+
+===name
+My name be Davey Jones.  Not that it be any business of a bildge rat like you!
+>bildge rat:What's a bildge rat?
+>arrg:Why do pirates always say Arrrgh?
+>treasure:I'm looking for treasure.  Can you tell me where the treasure is?
+>rude:What's got you so cranky?  Did a beaver chew on your leg?
+
+===arrg
+It's how we know we are pirates!
+We think, therefore we Arrrgh!
+>name:What is your name
+>treasure:I'm looking for treasure.  Can you tell me where the treasure is?
+>rude:I hate pirate jokes.
+
+==bildge rat
+Look in the mirror lad.  This be no place for a landlubber what don't even know a bildge rat from a hornpipe.  Get you gone!
+>end:
+
+===treasure
+Oh?  You be searching for X marks the spot be you?  Well let me tell you, you won't get nuthin outta me!  That treasure is buried deep and secret, and it should STAY that way.  It certainly won't be Davey Jones who has leaky lips and tell you otherwise.  Get you gone!
+>end
+
+===rude
+This be no place for a landlubber what don't even know a bildge rat from a hornpipe.  Get you gone!
+>end
+
+===rude
+You be nothing but a scurvey dog.  Get you gone!
+>end
+
+===rude
+I wont have a picaroon like you hanging out on my deck.  Get you gone!
+>end

@@ -1,0 +1,53 @@
+Simple Dialogs are just text files, and they are fairly simple.
+
+This is an example of a simple dialog text file:
+
+===Start
+Shiver me timbers, but you caught me by surprise matey!
+What be ye doin here?  Arrrgh!  This be no fit place for land lubbers!
+
+>name:What is your name
+>arrg:Why do pirates always say Arrrgh?
+>treasure:I'm looking for treasure.  Can you tell me where the treasure is?
+>rude:What's got you so cranky?  Did a beaver chew on your wooden leg?
+>end:Good bye.
+
+The dialog starts with a tag, a tag is any line that has an = in pos 1.  And every dialog file must have at least one START tag.
+Tags are not case sensitive, and any characters besides letters, digits, dashes, and underscores are removed.  letters are all converted to uppercase.
+This means ALL equal symbols will be removed.  Every tag must start with 1, I like 3, I think it makes them stand out more, but it doesn't matter how many equal signs you have at the begining, as long as you have at least 1.
+so Start, start, st art, and START will all be treated the same by simple dialogs.
+You can also add a "weight" to a tag line if you wish, we will talk more about that later.
+
+Following the tag will be the dialog you want the character to say.  This can be as long or as short as you wish.  Just don't start any lines with = or >
+
+After the dialog will come the replies.  Replies all start with a > sign.  Followed by a target, followed by a colon, then by the text of the reply.
+The target is the dialog tag you want to go to next.  There is one special target, that is "end"  That does NOT go to another dialog tag, instead it closes the formspec and ends the conversation.
+
+So lets expand our dialog with another tag:
+
+-----
+
+===Start
+Shiver me timbers, but you caught me by surprise matey!
+What be ye doin here?  Arrrgh!  This be no fit place for land lubbers!
+
+>name:What is your name
+>arrg:Why do pirates always say Arrrgh?
+>treasure:I'm looking for treasure.  Can you tell me where the treasure is?
+>rude:What's got you so cranky?  Did a beaver chew on your wooden leg?
+>end:Good bye.
+
+===name
+My name be Davey Jones.  Not that it be any business of a bildge rat like you!
+>bildge rat:What's a bildge rat?
+>arrg:Why do pirates always say Arrrgh?
+>treasure:I'm looking for treasure.  Can you tell me where the treasure is?
+>rude:What's got you so cranky?  Did a beaver chew on your leg?
+
+-----
+
+Now we have clarified the "Name" tag.  So, if the player clicks on "What is your name" in the start section, the dialog will move to the "name" section and display that.
+You keep adding sections until every possible path through the dialog has a dialog tag for it. 
+It is very important that you do NOT have reply targets that do not actually match up with a dialog tag.  If you do, your dialog will not work.
+
+
