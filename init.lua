@@ -6,8 +6,9 @@ simple_dialogs = { }
 
 local contextctr = {}
 local contextdlg = {}
+
 --[[
-local tagfilter=simple_dialogs.tagfilter
+local tag_filter=simple_dialogs.tag_filter
 local wrap=simple_dialogs.wrap
 local get_npcself_from_id=simple_dialogs.get_npcself_from_id
 local set_npc_id=simple_dialogs.set_npc_id
@@ -98,7 +99,7 @@ end) --register_on_player_receive_fields dialog_controls
 
 function simple_dialogs.process_simple_dialog_control_fields(pname,npcself,fields)
 	if fields["save"] or fields["saveandtest"] then
-		simple_dialogs.load_dialog_from_string(npcself,fields["dialog"])
+		simple_dialogs.load_dialog_from_string(npcself,fields["dialog"],pname)
 	end --save or saveandtest
 	if fields["saveandtest"] then
 		minetest.show_formspec(pname,"simple_dialogs:dialog",simple_dialogs.get_dialog_formspec(pname,npcself,"START"))
@@ -109,7 +110,126 @@ end --process_simple_dialog_control_fields
 
 
 
+--this function will go through a string and build a list that tells what order
+--to process parenthesis (or any other open close delimiter) in.
+--example:
+--12345678901234
+--((3*(21+2))/4)
+--list[1].open=5 close=10
+--list[2].open=2 close=11
+--list[3].open=1 close=14
+--note that if you pass this a line that has bad syntax, it will not throw an error, but instead return an empty list
+--list[].open and close are inclusive.  it includes the delimeter
+--list[].opene and closee are exclusive.  it does NOT include the delimiter
+--so in the above example:
+--list[1].opene=6 close=9
+--list[2].opene=3 close=10
+--list[3].opene=2 close=13
+function simple_dialogs.build_grouping_list(line,opendelim,closedelim)
+	--minetest.log("GGG build grouping top, line="..line)
+	local grouping={}
+	grouping.list={}
+	grouping.origline=line
+	local openstack={}
+	local opendelim_len=string.len(opendelim)
+	grouping.opendelim_len=opendelim_len
+	local closedelim_len=string.len(closedelim)
+	grouping.closedelim_len=closedelim_len
+	--local i=string.find(line,opendelim)-1 --start just before first open delim   (causes problems because of [ being a special character to find)
+	for i=1,string.len(line),1 do
+		if string.sub(line,i,i+opendelim_len-1)==opendelim then --open delim
+			openstack[#openstack+1]=i  --open pos onto stack.
+		elseif string.sub(line,i,i+closedelim_len-1)==closedelim then -- close delim
+			--if you find parens out of order, just stop and return an empty list
+			if #openstack<1 then return {} end 
+			local l=#grouping.list+1
+			grouping.list[l]={}
+			local gll=grouping.list[l]
+			gll.open=openstack[#openstack]
+			gll.opene=gll.open+(opendelim_len)
+			gll.close=i+(closedelim_len-1)
+			gll.closee=i-1
+			gll.section=string.sub(grouping.origline,gll.open,gll.close)
+			gll.sectione=string.sub(grouping.origline,gll.opene,gll.closee)
+			table.remove(openstack,#openstack) --remove from stack
+		end --if
+	end --while
+	--minetest.log("GGG about to return")
+	return grouping
+end --build_grouping_list
+
+
+
+function simple_dialogs.grouping_replace(grouping,idx,replacewith,incl_excl)
+	minetest.log("GGGR top grouping="..dump(grouping).." idx="..idx.." replacewith="..replacewith.." incl_excl="..incl_excl)
+	if not incl_excl then incl_excl="INCLUSIVE" end
+	if not grouping.line then grouping.line=grouping.origline end
+	local s=grouping.list[idx].open
+	local e=grouping.list[idx].close
+	if incl_excl=="EXCLUSIVE" then 
+		s=grouping.list[idx].opene
+		e=grouping.list[idx].closee
+	end 
+	local origlen=e-s+1
+	local diff=string.len(replacewith)-origlen
+	local line=grouping.line
+	grouping.line=string.sub(line,1,s-1)..replacewith..string.sub(line,e+1)
+	for i=1,#grouping.list,1 do
+		local gli=grouping.list[i]
+		if gli.open>s then gli.open=gli.open+diff end
+		if gli.opene>s then gli.opene=gli.opene+diff end
+		if gli.close>s then gli.close=gli.close+diff end
+		if gli.closee>s then gli.closee=gli.closee+diff end
+	end --for
+	minetest.log("GGGR bot grouping="..dump(grouping))
+return grouping.line
+end--grouping_replace
+
+
+
+function simple_dialogs.upper_case_vars(line)
+	local grouping=simple_dialogs.build_grouping_list(line,"@[","]@")
+	for i=1,#grouping.list,1 do
+		--I could run this through the varname filter, but do I really want to do that?
+		line=simple_dialogs.grouping_replace(grouping,i,string.upper(grouping.list[i].sectione),"EXCLUSIVE")
+		--line=string.sub(line,1,list[i].open-1)..string.upper(string.sub(line,list[i].open,list[i].close))..string.sub(line,list[i].close+1)
+	end --for
+	return line
+end --upper_case_vars
+
+
+
+function simple_dialogs.load_dialog_var(npcself,varname,varval)
+	if npcself then
+		if not npcself.dialogvars then npcself.dialogvars = {} end
+		npcself.dialogvars[simple_dialogs.varname_filter(varname)] = varval
+	end
+end --load_dialog_var
+
+
+
+--this function populates variables within dialog text
+function simple_dialogs.populate_vars(npcself,line)
+	if npcself and npcself.dialogvars then
+		local grouping=simple_dialogs.build_grouping_list(line,"@[","]@")
+		for i=1,#grouping.list,1 do
+			local gli=grouping.list[i]
+			local k=gli.sectione
+			if npcself.dialogvars[gli.sectione] then
+				line=simple_dialogs.grouping_replace(grouping,i,npcself.dialogvars[gli.sectione],"INCLUSIVE")
+			--line=string.sub(line,1,list[i].open-1)..string.upper(string.sub(line,list[i].open,list[i].close))..string.sub(line,list[i].close+1)
+			end --if
+		end --for
+	end --if
+	return line
+end --populate_vars
+
+
+
+
 --[[
+this is where the whole dialog structure is created.
+
 A typical dialog looks like this:
 ===Start
 Hello, welcome to Jarbinks tower of fun!
@@ -129,8 +249,11 @@ After the tag is the "say", this is what the npc says for this tag.
 Replies start with > in position 1, and are followed by a target and a colon.  The target is the "tag" this replay takes you to.
 the reply follows the colon
 --]]
-function simple_dialogs.load_dialog_from_string(npcself,dialogstr)
+function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
 	npcself.dialog = {}
+	npcself.dialogvars = {}
+	--add playername to variables IF it was passed in
+	if pname then simple_dialogs.load_dialog_var(npcself,"PLAYERNAME",pname) end  
 	local tag = ""
 	local tagcount=1
 	local weight=1
@@ -139,7 +262,7 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr)
 	local reply = ""
 	for line in dialogstr:gmatch '[^\n]+' do
 		--minetest.log("simple_dialogs->loadstr: line="..line)
-		if string.sub(line,1,1) == "=" then
+		if string.sub(line,1,1) == "=" then  --we found a tag, process it
 			tag=line  --this might still include weight
 			--get the weight from parenthesis
 			weight=1
@@ -154,7 +277,7 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr)
 			end
 			--
 			--strip tag down to only allowed characters
-			tag=simple_dialogs.tagfilter(tag) --this also strips all leading = signs
+			tag=simple_dialogs.tag_filter(tag) --this also strips all leading = signs
 			--
 			tagcount=1
 			if npcself.dialog[tag] then --existing tag
@@ -170,7 +293,7 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr)
 			npcself.dialog[tag][tagcount]={}
 			npcself.dialog[tag][tagcount].weight=weight
 			npcself.dialog[tag][tagcount].reply={}
-		elseif string.sub(line,1,1) == ">" and tag ~= "" then
+		elseif string.sub(line,1,1) == ">" and tag ~= "" then  --we found a reply, process it
 			--if we got a reply, then the say is ended, add it
 			npcself.dialog[tag][tagcount].say=say
 			--split into target and reply
@@ -179,7 +302,7 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr)
 				i=string.len(line)+1 --if they left out the colon, treat the whole line as the tag
 			end
 			npcself.dialog[tag][tagcount].reply[replycount]={}
-			npcself.dialog[tag][tagcount].reply[replycount].target=simple_dialogs.tagfilter(string.sub(line,2,i-1))
+			npcself.dialog[tag][tagcount].reply[replycount].target=simple_dialogs.tag_filter(string.sub(line,2,i-1))
 			npcself.dialog[tag][tagcount].reply[replycount].text=string.sub(line,i+1)
 			if npcself.dialog[tag][tagcount].reply[replycount].text=="" then
 				npcself.dialog[tag][tagcount].reply[replycount].text=string.sub(line,2,i-1)
@@ -187,7 +310,9 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr)
 			replycount=replycount+1
 		--we check that a tag is set to avoid errors, just in case they put text before the first tag
 		--we check that replycount=1 because we are going to ignore any text between the replies and the next tag
-		elseif tag~="" and replycount==1 then
+		elseif tag~="" and replycount==1 then  --we found a dialog line, process it
+			--first fix any variables by changing them to upper case
+			line=simple_dialogs.upper_case_vars(line)
 			say=say..line.."\n"
 		end
 	end --for line in dialog
@@ -198,11 +323,18 @@ end --load_dialog_from_string
 
 
 --tags will be upper cased, and have all characters stripped except for letters, digits, dash, and underline
-function simple_dialogs.tagfilter(tagin)
-	local allowedtagchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789%-_" --characters allowed in dialog tags %=escape
-	return string.upper(tagin):gsub("[^" .. allowedtagchars .. "]", "")
-end --tagfilter
+function simple_dialogs.tag_filter(tagin)
+	local allowedchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_%-" --characters allowed in dialog tags %=escape
+	return string.upper(tagin):gsub("[^" .. allowedchars .. "]", "")
+end --tag_filter
 
+
+
+--variable names will be upper cased, and have all characters stripped except for letters, digits, dash, underline, and period
+function simple_dialogs.varname_filter(varnamein)
+	local allowedchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_%-%." --characters allowed in variable names %=escape
+	return string.upper(varnamein):gsub("[^" .. allowedchars .. "]", "")
+end --varname_filter
 
 
 --this function lets you load a dialog for an npc from a file.  So you can store predetermined dialogs
@@ -263,6 +395,7 @@ end --get_dialog_formspec
 
 
 
+
 function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	--minetest.log("simple_dialogs->getdialogtar: pname="..pname.." tag="..tag)
 	--minetest.log("simple_dialogs->getdialogtar: npcself="..dump(npcself))	
@@ -294,12 +427,14 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	--minetest.log("simple_dialogs->getdialogtar: tag="..tag.." tagcount="..tagcount)
 	--minetest.log("simple_dialogs->getdialogtar: before formspec npcself.dialog="..dump(npcself.dialog))
 	local say=npcself.dialog[tag][tagcount].say
+	say=simple_dialogs.populate_vars(npcself,say)
 	--
 	--now get the replylist
 	local replies=""
 	for r=1,#npcself.dialog[tag][tagcount].reply,1 do
 		if r>1 then replies=replies.."," end
 		local rply=npcself.dialog[tag][tagcount].reply[r].text
+		rply=simple_dialogs.populate_vars(npcself,rply)
 		--if string.len(rply)>70 then rply=string.sub(rply,1,70)..string.char(10)..string.sub(rply,71) end
 		--TODO: this is a problem, wrapping once works, but is crowded.  wrapping 3 or more times overlaps text.
 		--TODO: also, how to determine what the REAL wrap length should be based on player screen width?
