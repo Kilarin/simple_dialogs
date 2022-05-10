@@ -121,7 +121,7 @@ Hello, welcome to Jarbinks tower of fun!
 tags start with = in pos 1 and can look like ===Start   or  =Treasure(5) (any number of ='s are ok as long as there is 1 in pos 1)
 a number in parenthesis after the tag name is a "weight" for that entry, which effects how frequently it is chosen.
 weight is optional and defaults to 1.
-you can have multiple tags with the same name, each gets a number, "tagcount", 
+you can have multiple tags with the same name, each gets a number, "subtag", 
 when you reference that tag one of the multiple results will be chosen randomly
 tags can only contain letters, numbers, underscores, and dashes, all other characters are stripped (letters are uppercased)
 
@@ -130,6 +130,7 @@ After the tag is the "say", this is what the npc says for this tag.
 Replies start with > in position 1, and are followed by a target and a colon.  The target is the "tag" this replay takes you to.
 the reply follows the colon
 --]]
+--TODO: split the huge ifelse into methods?
 function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
 	npcself.dialog = {}
 	npcself.dialog.dlg={}
@@ -137,10 +138,11 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
 	--add playername to variables IF it was passed in
 	if pname then simple_dialogs.load_dialog_var(npcself,"PLAYERNAME",pname) end
 	local tag = ""
-	local tagcount=1
+	local subtag=1
 	local weight=1
 	local say = ""
-	local replycount = ""
+	local replycount = 0
+	local cmndcount= 0
 	for line in dialogstr:gmatch '[^\n]+' do
 		--minetest.log("simple_dialogs->loadstr: line="..line)
 		local firstchar=string.sub(line,1,1)
@@ -161,33 +163,36 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
 			--strip tag down to only allowed characters
 			tag=simple_dialogs.tag_filter(tag) --this also strips all leading = signs
 			--
-			tagcount=1
+			subtag=1
 			if npcself.dialog.dlg[tag] then --existing tag
-				tagcount=#(npcself.dialog.dlg[tag])+1
-				weight=npcself.dialog.dlg[tag][tagcount-1].weight+weight  --add previous weight to current weight
-				--weight is always the maximum number rolled that returns this tagcount
+				subtag=#(npcself.dialog.dlg[tag])+1
+				weight=npcself.dialog.dlg[tag][subtag-1].weight+weight  --add previous weight to current weight
+				--weight is always the maximum number rolled that returns this subtag
 				--TODO: further notes on weight?  here or in readme?
 			else --if this is a new tag
 				npcself.dialog.dlg[tag]={} 
 			end
 			say=""
+			--TODO: start replycount as 0, inc when adding reply, its much clearer  
 			replycount=1
-			npcself.dialog.dlg[tag][tagcount]={}
-			npcself.dialog.dlg[tag][tagcount].weight=weight
-			npcself.dialog.dlg[tag][tagcount].reply={}
+			cmndcount=0
+			npcself.dialog.dlg[tag][subtag]={}
+			npcself.dialog.dlg[tag][subtag].weight=weight
+			npcself.dialog.dlg[tag][subtag].reply={}
+			npcself.dialog.dlg[tag][subtag].cmnd={}
 		elseif firstchar == chars.reply and tag ~= "" then  --we found a reply, process it
 			--if we got a reply, then the say is ended, add it
-			npcself.dialog.dlg[tag][tagcount].say=say
+			npcself.dialog.dlg[tag][subtag].say=say
 			--split into target and reply
 			local i, j = string.find(line,":")
 			if i==nil then 
 				i=string.len(line)+1 --if they left out the colon, treat the whole line as the tag
 			end
-			npcself.dialog.dlg[tag][tagcount].reply[replycount]={}
-			npcself.dialog.dlg[tag][tagcount].reply[replycount].target=simple_dialogs.tag_filter(string.sub(line,2,i-1))
-			npcself.dialog.dlg[tag][tagcount].reply[replycount].text=string.sub(line,i+1)
-			if npcself.dialog.dlg[tag][tagcount].reply[replycount].text=="" then
-				npcself.dialog.dlg[tag][tagcount].reply[replycount].text=string.sub(line,2,i-1)
+			npcself.dialog.dlg[tag][subtag].reply[replycount]={}
+			npcself.dialog.dlg[tag][subtag].reply[replycount].target=simple_dialogs.tag_filter(string.sub(line,2,i-1))
+			npcself.dialog.dlg[tag][subtag].reply[replycount].text=string.sub(line,i+1)
+			if npcself.dialog.dlg[tag][subtag].reply[replycount].text=="" then
+				npcself.dialog.dlg[tag][subtag].reply[replycount].text=string.sub(line,2,i-1)
 			end
 			replycount=replycount+1
 		--we check that a tag is set to avoid errors, just in case they put text before the first tag
@@ -197,18 +202,25 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
 			if spc then
 				local cmnd=string.upper(string.sub(line,2,spc-1))
 				local str=string.sub(line,spc+1) --rest of line without the command
-				str=simple_dialogs.populate_vars(npcself,str) --populate any variables
+				--str=simple_dialogs.populate_vars(npcself,str) --populate any variables
+				--cmndcount=cmndcount+1
+				--npcself.dialog.dlg[tag][subtag].cmnd[cmndcount].cmnd=cmnd
+				--npcself.dialog.dlg[tag][subtag].cmnd[cmndcount].str=str
 				if cmnd=="SET" then
 					local eq=string.find(str,"=",6)
 					if eq then
 						local k=string.sub(str,1,eq-1)
 						local v=string.sub(str,eq+1)
 						if v then
-							k=simple_dialogs.varname_filter(k)
-							simple_dialogs.load_dialog_var(npcself,k,v) 
+							cmndcount=cmndcount+1
+							npcself.dialog.dlg[tag][subtag].cmnd[cmndcount]={}
+							npcself.dialog.dlg[tag][subtag].cmnd[cmndcount].cmnd=cmnd
+							npcself.dialog.dlg[tag][subtag].cmnd[cmndcount].k=k
+							npcself.dialog.dlg[tag][subtag].cmnd[cmndcount].v=v
+							--not that we have NOT populated any vars at that point, that happens when the dialog is actually displayed
 						end --if v
 					end --if eq
-				end --if cmnd
+				end --if SET
 			end --if spc
 		elseif tag~="" and replycount==1 then  --we found a dialog line, process it
 			say=say..line.."\n"
@@ -313,27 +325,44 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	local tagmax=#npcself.dialog.dlg[tag]
 	--get a random number between 1 and the max weight
 	local rnd=math.random(npcself.dialog.dlg[tag][tagmax].weight)
-	local tagcount=1
+	
+	--TODO: subtag is better than tagcount (which looks like a max) but still not a wonderful
+	--variable name.  what would be better?  rndtag?  nah, tagchoice?  no.  
+	--this represents which tag was chosen when you had repeated tags
+	local subtag=1
 	--we loop through all the matching tags and select the first one for which our random number
 	--is less than or equal to that tags weight.
 	for t=1,tagmax,1 do
 		--minetest.log("simple_dialogs->getdialogtar: t="..t.." rnd="..rnd.." tag="..tag.." tagmax="..tagmax.." weight="..npcself.dialog.dlg[tag][t].weight)
 		if rnd<=npcself.dialog.dlg[tag][t].weight then 
-			tagcount=t
+			subtag=t
 			break 
 		end
 	end
-	--now tagcount equals the selected tagcount
-	--minetest.log("simple_dialogs->getdialogtar: tag="..tag.." tagcount="..tagcount)
+	--now subtag equals the selected subtag
+	--minetest.log("simple_dialogs->getdialogtar: tag="..tag.." subtag="..subtag)
 	--minetest.log("simple_dialogs->getdialogtar: before formspec npcself.dialog="..dump(npcself.dialog))
-	local say=npcself.dialog.dlg[tag][tagcount].say
+	
+	--very first, run any commands
+	for c=1,#npcself.dialog.dlg[tag][subtag].cmnd do
+		--minetest.log("simple_dialogs->getdialogtar: c="..c.." cmnd="..dump(npcself.dialog.dlg[tag][subtag].cmnd))
+		local cmnd=npcself.dialog.dlg[tag][subtag].cmnd[c].cmnd
+		if cmnd=="SET" then
+			local k=npcself.dialog.dlg[tag][subtag].cmnd[c].k
+			local v=npcself.dialog.dlg[tag][subtag].cmnd[c].v
+			--minetest.log("k="..dump(k).." v="..dump(v))
+			simple_dialogs.load_dialog_var(npcself,k,v)  --load the variable (varname filtering and populating vars happens inside this method)
+		end --if SET
+	end --for c
+	
+	local say=npcself.dialog.dlg[tag][subtag].say
 	say=simple_dialogs.populate_vars(npcself,say)
 	--
 	--now get the replylist
 	local replies=""
-	for r=1,#npcself.dialog.dlg[tag][tagcount].reply,1 do
+	for r=1,#npcself.dialog.dlg[tag][subtag].reply,1 do
 		if r>1 then replies=replies.."," end
-		local rply=npcself.dialog.dlg[tag][tagcount].reply[r].text
+		local rply=npcself.dialog.dlg[tag][subtag].reply[r].text
 		rply=simple_dialogs.populate_vars(npcself,rply)
 		--if string.len(rply)>70 then rply=string.sub(rply,1,70)..string.char(10)..string.sub(rply,71) end
 		--TODO: this is a problem, wrapping once works, but is crowded.  wrapping 3 or more times overlaps text.
@@ -347,9 +376,9 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 		"textarea["..x..","..y..";9.4,5;;Dialog;"..minetest.formspec_escape(say).."]",
 		"textlist["..x..","..y2..";9.4,5;reply;"..replies.."]"  --note that replies were escaped as they were added
 	}
-	--store the tag and tagcount in context as well
+	--store the tag and subtag in context as well
 	contextdlg[pname].tag=tag
-	contextdlg[pname].tagcount=tagcount
+	contextdlg[pname].subtag=subtag
 	return table.concat(formspec,"")
 end --get_dialog_text_and_replies
 
@@ -385,7 +414,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	if   not contextdlg[pname] 
 		or not contextdlg[pname].npcId 
 		or not contextdlg[pname].tag 
-		or not contextdlg[pname].tagcount 
+		or not contextdlg[pname].subtag 
 		then 
 			minetest.log("simpleDialogs->recieve_fields dialog: ERROR in dialog receive_fields: context not properly set")
 			return 
@@ -394,15 +423,15 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	local npcself=nil
 	npcself=simple_dialogs.get_npcself_from_id(npcId)  --try to find the npcId in the list of luaentities
 	local tag=contextdlg[pname].tag
-	local tagcount=contextdlg[pname].tagcount
-	--minetest.log("simple_dialogs->receive_fields dialog: tag="..tag.." tagcount="..tagcount.." npcId="..npcId)
+	local subtag=contextdlg[pname].subtag
+	--minetest.log("simple_dialogs->receive_fields dialog: tag="..tag.." subtag="..subtag.." npcId="..npcId)
 	--minetest.log("simple_dialogs->receive_fields dialog: npcself="..dump(npcself))
 	if   not npcself 
 		or not npcself.dialog 
 		or not npcself.dialog.dlg[tag] 
-		or not npcself.dialog.dlg[tag][tagcount]
+		or not npcself.dialog.dlg[tag][subtag]
 		then 
-			minetest.log("simple_dialogs->receive_fields dialog: ERROR in dialog receive_fields: npcself.dialog.dlg[tag][tagcount] not found")
+			minetest.log("simple_dialogs->receive_fields dialog: ERROR in dialog receive_fields: npcself.dialog.dlg[tag][subtag] not found")
 			return
 	end
 	--
@@ -410,10 +439,10 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	if fields["reply"] then 
 		--minetest.log("simple_dialogs-> sss got back reply!"..dump(fields["reply"]))
 		local r=tonumber(string.sub(fields["reply"],5))
-		if npcself.dialog.dlg[tag][tagcount].reply[r].target == "END" then
+		if npcself.dialog.dlg[tag][subtag].reply[r].target == "END" then
 			minetest.close_formspec(pname, "simple_dialogs:dialog")
 		else
-			local newtag=npcself.dialog.dlg[tag][tagcount].reply[r].target
+			local newtag=npcself.dialog.dlg[tag][subtag].reply[r].target
 			minetest.show_formspec(pname,"simple_dialogs:dialog",simple_dialogs.get_dialog_formspec(pname,npcself,newtag))
 		end
 	end
@@ -427,7 +456,10 @@ end) --register_on_player_receive_fields dialog
 function simple_dialogs.load_dialog_var(npcself,varname,varval)
 	if npcself then
 		if not npcself.dialog.vars then npcself.dialog.vars = {} end
-		npcself.dialog.vars[simple_dialogs.varname_filter(varname)] = varval
+		varname=simple_dialogs.populate_vars(npcself,varname)  --populate vars
+		varname=simple_dialogs.varname_filter(varname)  --filter down to only allowed chars
+		varval=simple_dialogs.populate_vars(npcself,varval)  --populate vars
+		npcself.dialog.vars[varname] = varval  --add to variable list
 	end
 end --load_dialog_var
 
