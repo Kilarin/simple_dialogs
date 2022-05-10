@@ -13,6 +13,9 @@ chars.reply=">"
 chars.varopen="@["
 chars.varclose="]@"
 
+local helpfile=minetest.get_modpath("simple_dialogs").."/simple_dialogs_help.txt"
+local transparentpng=minetest.get_modpath("simple_dialogs").."/transparent.png"
+
 local registered_varloaders={}
 
 --[[
@@ -100,7 +103,8 @@ function simple_dialogs.process_simple_dialog_control_fields(pname,npcself,field
 		simple_dialogs.load_dialog_from_string(npcself,fields["dialog"],pname)
 	end --save or saveandtest
 	if fields["saveandtest"] then
-		minetest.show_formspec(pname,"simple_dialogs:dialog",simple_dialogs.get_dialog_formspec(pname,npcself,"START"))
+		--minetest.show_formspec(pname,"simple_dialogs:dialog",simple_dialogs.get_dialog_formspec(pname,npcself,"START"))
+		simple_dialogs.show_dialog_formspec(pname,npcself,"START")
 	elseif fields["help"] then
 		simple_dialogs.dialog_help(pname)
 	end
@@ -134,7 +138,6 @@ the reply follows the colon
 --]]
 --TODO: split the huge ifelse into methods?
 function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
-	minetest.log("simple_dialogs: ynpcself="..dump(npcself))
 	npcself.dialog = {}
 	npcself.dialog.dlg={}
 	npcself.dialog.vars = {}
@@ -211,14 +214,14 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
 				if cmnd=="SET" then
 					local eq=string.find(str,"=",6)
 					if eq then
-						local k=string.sub(str,1,eq-1)
-						local v=string.sub(str,eq+1)
-						if v then
+						local varname=string.sub(str,1,eq-1)
+						local varval=string.sub(str,eq+1)
+						if varval then
 							cmndcount=cmndcount+1
 							dlg[tag][subtag].cmnd[cmndcount]={}
 							dlg[tag][subtag].cmnd[cmndcount].cmnd=cmnd
-							dlg[tag][subtag].cmnd[cmndcount].k=k
-							dlg[tag][subtag].cmnd[cmndcount].v=v
+							dlg[tag][subtag].cmnd[cmndcount].varname=varname
+							dlg[tag][subtag].cmnd[cmndcount].varval=varval
 							--not that we have NOT populated any vars at that point, that happens when the dialog is actually displayed
 						end --if v
 					end --if eq
@@ -231,7 +234,7 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
 		end
 	end --for line in dialog
 	npcself.dialog.text=dialogstr
-	minetest.log("simple_dialogs->loadstr npcself.dialog="..dump(npcself.dialog))
+	--minetest.log("simple_dialogs->loadstr npcself.dialog="..dump(npcself.dialog))
 end --load_dialog_from_string
 
 
@@ -267,7 +270,8 @@ end --load_dialog_from_file
 
 
 function simple_dialogs.dialog_help(pname)
-	local file = io.open(minetest.get_modpath("simple_dialogs").."/simple_dialogs_help.txt", "r")
+	--local file = io.open(minetest.get_modpath("simple_dialogs").."/simple_dialogs_help.txt", "r")
+	local file = io.open(helpfile, "r")
 	if file then
 		--local help
 		local helpstr=file:read("*all")
@@ -290,7 +294,18 @@ end --dialog_help
 --call with tag=START for starting a dialog, or with no tag
 function simple_dialogs.show_dialog_formspec(pname,npcself,tag)
 	if not tag then tag="START" end
-	minetest.show_formspec(pname,"simple_dialogs:dialog",get_dialog_formspec(pname,npcself,tag))
+	minetest.show_formspec(pname,"simple_dialogs:dialog",simple_dialogs.get_dialog_formspec(pname,npcself,tag))
+--[[
+	minetest.log("simpledialogs: show_dialog_formspec formspec2")
+	replyformspec={
+		"formspec_version[4]",
+		"size[20,5]",
+		"position[0.05,0.8]",
+		"anchor[0,0]",
+		"textlist[0.375,0.375;20,5;reply2;testreply1,testreply2]"
+		}  
+	minetest.show_formspec(pname,"simple_dialogs:dialogreplys",table.concat(replyformspec,""))
+	]]--
 end --show_dialog_formspec
 
 
@@ -298,11 +313,17 @@ end --show_dialog_formspec
 function simple_dialogs.get_dialog_formspec(pname,npcself,tag)
 	contextdlg[pname]={}
 	contextdlg[pname].npcId=simple_dialogs.set_npc_id(npcself) --store the npc id in local context so we can use it when the form is returned.  (cant store self)
-	---minetest.log("FFF setting contextdlg[pname] contextdlg="..dump(contextdlg))
+	--minetest.log("FFF setting contextdlg[pname] contextdlg="..dump(contextdlg))
 	local formspec={
 		"formspec_version[4]",
-		"size[10,11.375]", 
-		"position[0.75,0.5]",
+		"size[20,15]", 
+		--"position[0.75,0.5]",
+		"position[0.05,0.05]",
+		"anchor[0,0]",
+		"no_prepend[]",        --must be present for below transparent setting to work
+		"bgcolor[;neither;]",  --make the formspec background transparent
+		--"background[0,0;10,10;spider.png;true]",
+		"box[0.370,0.4;9.6,8.6;#222222FF]", --draws a box background behind our text area
 		simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	}
 	return table.concat(formspec,"")
@@ -313,7 +334,7 @@ end --get_dialog_formspec
 
 function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	--minetest.log("simple_dialogs->getdialogtar: pname="..pname.." tag="..tag)
-	--minetest.log("simple_dialogs->getdialogtar: npcself="..dump(npcself))	
+	--minetest.log("simple_dialogs->getdialogtar: npcself="..dump(npcself))
 	--first we make certain everything is properly defined.  if there is an error we do NOT want to crash
 	--but we do return an error message that might help debug.
 	local errlabel="label[0.375,0.5; ERROR in get_dialog_text_and_replies, "
@@ -330,7 +351,7 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	--load any variables from calling mod
 	for f=1,#registered_varloaders do
 		registered_varloaders[f](npcself,pname)
-		minetest.log("simple_dialogs: ran registered_varloader "..f.." npcself="..dump(npcself))
+		--minetest.log("simple_dialogs: ran registered_varloader "..f)
 	end
 
 	local formspec={}
@@ -361,10 +382,9 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 		--minetest.log("simple_dialogs->getdialogtar: c="..c.." cmnd="..dump(dlg[tag][subtag].cmnd))
 		local cmnd=dlg[tag][subtag].cmnd[c].cmnd
 		if cmnd=="SET" then
-			local k=dlg[tag][subtag].cmnd[c].k
-			local v=dlg[tag][subtag].cmnd[c].v
-			--minetest.log("k="..dump(k).." v="..dump(v))
-			simple_dialogs.load_dialog_var(npcself,k,v)  --load the variable (varname filtering and populating vars happens inside this method)
+			local varname=dlg[tag][subtag].cmnd[c].varname
+			local varval=dlg[tag][subtag].cmnd[c].varval
+			simple_dialogs.load_dialog_var(npcself,varname,varval)  --load the variable (varname filtering and populating vars happens inside this method)
 		end --if SET
 	end --for c
 	
@@ -382,12 +402,13 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 		--TODO: also, how to determine what the REAL wrap length should be based on player screen width?
 		replies=replies..minetest.formspec_escape(simple_dialogs.wrap(rply,72,"     ",""))
 	end --for
-	local x=0.375
+	local x=0.45
 	local y=0.5
-	local y2=y+5.375
+	local x2=0.375
+	local y2=y+8.375
 	formspec={
-		"textarea["..x..","..y..";9.4,5;;Dialog;"..minetest.formspec_escape(say).."]",
-		"textlist["..x..","..y2..";9.4,5;reply;"..replies.."]"  --note that replies were escaped as they were added
+		"textarea["..x..","..y..";9.4,8;;;"..minetest.formspec_escape(say).."]",
+		"textlist["..x2..","..y2..";19,5;reply;"..replies.."]"  --note that replies were escaped as they were added
 	}
 	--store the tag and subtag in context as well
 	contextdlg[pname].tag=tag
@@ -661,5 +682,5 @@ end--grouping_replace
 
 function simple_dialogs.register_varloader(func)
 	registered_varloaders[#registered_varloaders+1]=func
-	minetest.log("simple_dialogs: register_varloader "..#registered_varloaders.." xnpcself="..dump(npcself))
+	minetest.log("simple_dialogs: register_varloader "..#registered_varloaders)
 end
