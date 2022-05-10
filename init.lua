@@ -150,8 +150,12 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
 	local say = ""
 	local replycount = 0
 	local cmndcount= 0
-	for line in dialogstr:gmatch '[^\n]+' do
-		--minetest.log("simple_dialogs->loadstr: line="..line)
+	--minetest.log("simple_dialogs-> dialogstr="..dialogstr)
+	--for line in dialogstr:gmatch '[^\n]+' do
+	--for line in string.gmatch(dialogstr,'[^\r\n]+') do
+	--for line in string.gmatch(dialogstr,'[^\r\n]*') do  --this doubles blank lines
+	for line in (dialogstr..'\n'):gmatch'(.-)\r?\n' do --this works!
+		minetest.log("simple_dialogs->loadstr: line="..line)
 		local firstchar=string.sub(line,1,1)
 		if firstchar == chars.tag then  --we found a tag, process it
 			tag=line  --this might still include weight
@@ -316,14 +320,14 @@ function simple_dialogs.get_dialog_formspec(pname,npcself,tag)
 	--minetest.log("FFF setting contextdlg[pname] contextdlg="..dump(contextdlg))
 	local formspec={
 		"formspec_version[4]",
-		"size[20,15]", 
+		"size[28,15]", 
 		--"position[0.75,0.5]",
 		"position[0.05,0.05]",
 		"anchor[0,0]",
 		"no_prepend[]",        --must be present for below transparent setting to work
 		"bgcolor[;neither;]",  --make the formspec background transparent
 		--"background[0,0;10,10;spider.png;true]",
-		"box[0.370,0.4;9.6,8.6;#222222FF]", --draws a box background behind our text area
+		"box[0.370,0.4;9.6,8.4;#222222FF]", --draws a box background behind our text area
 		simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	}
 	return table.concat(formspec,"")
@@ -351,7 +355,7 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	--load any variables from calling mod
 	for f=1,#registered_varloaders do
 		registered_varloaders[f](npcself,pname)
-		--minetest.log("simple_dialogs: ran registered_varloader "..f)
+		--minetest.log("simple_dialogs-> ran registered_varloader "..f)
 	end
 
 	local formspec={}
@@ -400,7 +404,8 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 		--if string.len(rply)>70 then rply=string.sub(rply,1,70)..string.char(10)..string.sub(rply,71) end
 		--TODO: this is a problem, wrapping once works, but is crowded.  wrapping 3 or more times overlaps text.
 		--TODO: also, how to determine what the REAL wrap length should be based on player screen width?
-		replies=replies..minetest.formspec_escape(simple_dialogs.wrap(rply,72,"     ",""))
+		--replies=replies..minetest.formspec_escape(simple_dialogs.wrap(rply,166,"     ",""))
+		replies=replies..minetest.formspec_escape(rply)
 	end --for
 	local x=0.45
 	local y=0.5
@@ -408,7 +413,7 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	local y2=y+8.375
 	formspec={
 		"textarea["..x..","..y..";9.4,8;;;"..minetest.formspec_escape(say).."]",
-		"textlist["..x2..","..y2..";19,5;reply;"..replies.."]"  --note that replies were escaped as they were added
+		"textlist["..x2..","..y2..";27,5;reply;"..replies.."]"  --note that replies were escaped as they were added
 	}
 	--store the tag and subtag in context as well
 	contextdlg[pname].tag=tag
@@ -682,5 +687,5 @@ end--grouping_replace
 
 function simple_dialogs.register_varloader(func)
 	registered_varloaders[#registered_varloaders+1]=func
-	minetest.log("simple_dialogs: register_varloader "..#registered_varloaders)
+	minetest.log("simple_dialogs-> register_varloader "..#registered_varloaders)
 end
