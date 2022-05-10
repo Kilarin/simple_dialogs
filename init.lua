@@ -13,6 +13,8 @@ chars.reply=">"
 chars.varopen="@["
 chars.varclose="]@"
 
+local registered_varloaders={}
+
 --[[
 local tag_filter=simple_dialogs.tag_filter
 local wrap=simple_dialogs.wrap
@@ -132,12 +134,13 @@ the reply follows the colon
 --]]
 --TODO: split the huge ifelse into methods?
 function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
+	minetest.log("simple_dialogs: ynpcself="..dump(npcself))
 	npcself.dialog = {}
 	npcself.dialog.dlg={}
 	npcself.dialog.vars = {}
 	local dlg=npcself.dialog.dlg  --shortcut to make things more readable
-	--add playername to variables IF it was passed in
-	if pname then simple_dialogs.load_dialog_var(npcself,"PLAYERNAME",pname) end
+
+	
 	local tag = ""
 	local subtag=1
 	local weight=1
@@ -293,7 +296,6 @@ end --show_dialog_formspec
 
 --this gets the dialog formspec for chatting with the npc
 function simple_dialogs.get_dialog_formspec(pname,npcself,tag)
-	--minetest.log("simple_dialogs->getdialogformspec: npcself="..dump(npcself))
 	contextdlg[pname]={}
 	contextdlg[pname].npcId=simple_dialogs.set_npc_id(npcself) --store the npc id in local context so we can use it when the form is returned.  (cant store self)
 	---minetest.log("FFF setting contextdlg[pname] contextdlg="..dump(contextdlg))
@@ -322,6 +324,14 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	end
 	
 	local dlg=npcself.dialog.dlg  --shortcut to make things more readable
+	
+	--add playername to variables IF it was passed in
+	if pname then simple_dialogs.load_dialog_var(npcself,"PLAYERNAME",pname) end
+	--load any variables from calling mod
+	for f=1,#registered_varloaders do
+		registered_varloaders[f](npcself,pname)
+		minetest.log("simple_dialogs: ran registered_varloader "..f.." npcself="..dump(npcself))
+	end
 
 	local formspec={}
 	--how many matching tags are there  (for example, if there are 3 "TREASURE" tags)
@@ -457,8 +467,9 @@ end) --register_on_player_receive_fields dialog
 
 
 function simple_dialogs.load_dialog_var(npcself,varname,varval)
-	if npcself then
+	if npcself and varname then
 		if not npcself.dialog.vars then npcself.dialog.vars = {} end
+		if not varval then varval="" end
 		varname=simple_dialogs.populate_vars(npcself,varname)  --populate vars
 		varname=simple_dialogs.varname_filter(varname)  --filter down to only allowed chars
 		varval=simple_dialogs.populate_vars(npcself,varval)  --populate vars
@@ -648,3 +659,7 @@ return grouping.txt
 end--grouping_replace
 
 
+function simple_dialogs.register_varloader(func)
+	registered_varloaders[#registered_varloaders+1]=func
+	minetest.log("simple_dialogs: register_varloader "..#registered_varloaders.." xnpcself="..dump(npcself))
+end
