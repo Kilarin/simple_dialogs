@@ -155,7 +155,7 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
 	--for line in string.gmatch(dialogstr,'[^\r\n]+') do
 	--for line in string.gmatch(dialogstr,'[^\r\n]*') do  --this doubles blank lines
 	for line in (dialogstr..'\n'):gmatch'(.-)\r?\n' do --this works!
-		minetest.log("simple_dialogs->loadstr: line="..line)
+		--minetest.log("simple_dialogs->loadstr: line="..line)
 		local firstchar=string.sub(line,1,1)
 		if firstchar == chars.tag then  --we found a tag, process it
 			tag=line  --this might still include weight
@@ -527,8 +527,171 @@ end --populate_vars
 
 
 
-
 --------------------------------------------------------------
+
+
+
+
+--[[ *******************************************************************************
+Grouping
+These would probably be better separated into a different lua, perhaps even a different mod?
+--]]
+
+
+
+
+
+--this function will go through a string and build a list that tells what order
+--to process parenthesis (or any other open close delimiter) in.
+--example:
+--12345678901234
+--((3*(21+2))/4)
+--list[1].open=5 close=10
+--list[2].open=2 close=11
+--list[3].open=1 close=14
+--note that if you pass this txt that has bad syntax, it will not throw an error, but instead return an empty list
+--list[].open and close are inclusive.  it includes the delimeter
+--list[].opene and closee are exclusive.  it does NOT include the delimiter
+--so in the above example:
+--list[1].opene=6 close=9
+--list[2].opene=3 close=10
+--list[3].opene=2 close=13
+--
+--if you pass funcname then only entries that start with funcname( are returned in the final list
+function simple_dialogs.build_grouping_list(txt,opendelim,closedelim,funcname)
+	--minetest.log("GGG build grouping top, txt="..txt)
+	if funcname then funcname=simple_dialogs.trim(string.upper(funcname)) end
+	local grouping={}
+	grouping.list={}
+	grouping.origtxt=txt --is this useful?
+	grouping.txt=txt
+	local openstack={}
+	local funcstack={}
+	local opendelim_len=string.len(opendelim)
+	grouping.opendelim_len=opendelim_len
+	local closedelim_len=string.len(closedelim)
+	grouping.closedelim_len=closedelim_len
+	for i=1,string.len(txt),1 do
+		if string.sub(txt,i,i+opendelim_len-1)==opendelim then --open delim
+			openstack[#openstack+1]=i  --open pos onto stack.
+			if funcname and ((i-#funcname)>0) and (string.upper(string.sub(txt,i-#funcname,i-1))==funcname) then
+				funcstack[#openstack]=funcname --just a flag to let us know this openstack matches our function
+				openstack[#openstack]=i-#funcname
+			end
+		elseif string.sub(txt,i,i+closedelim_len-1)==closedelim then -- close delim
+			--if you find parens out of order, just stop and return what you have so far
+			if #openstack<1 then return grouping end 
+			if (not funcname) or (funcstack[#openstack]) then
+				local l=#grouping.list+1
+				grouping.list[l]={}
+				local gll=grouping.list[l]
+				gll.open=openstack[#openstack]
+				gll.opene=gll.open+(opendelim_len)
+				gll.close=i+(closedelim_len-1)
+				gll.closee=i-1
+			end --if not funcname
+			--gll.section=string.sub(grouping.origtxt,gll.open,gll.close)
+			--gll.sectione=string.sub(grouping.origtxt,gll.opene,gll.closee)
+			table.remove(openstack,#openstack) --remove from stack
+			table.remove(funcstack,#openstack) --may or may not be there
+		end --if
+	end --while
+	--minetest.log("GGG about to return")
+	return grouping
+end --build_grouping_list
+
+
+
+function simple_dialogs.grouping_section(grouping,i,incl_excl)
+	if not incl_excl then incl_excl="INCLUSIVE" end
+	--minetest.log("GGGs top i="..i.." incl_excl="..incl_excl)
+	local gli=grouping.list[i]
+	--minetest.log("GGGs after gli")
+	if incl_excl=="INCLUSIVE" then
+		--minetest.log("GGGs inclusive")
+		return string.sub(grouping.txt,gli.open,gli.close)
+	else
+		--minetest.log("GGGs exclusive") 
+		return string.sub(grouping.txt,gli.opene,gli.closee)
+	end
+end --grouping_section
+
+
+
+function simple_dialogs.grouping_sectione(grouping,i)
+	--minetest.log("GGGse i="..i.." grouping="..dump(grouping))
+	simple_dialogs.grouping_section(grouping,i,"EXCLUSIVE")
+end --grouping_sectione
+
+
+function simple_dialogs.grouping_replace(grouping,idx,replacewith,incl_excl)
+	--minetest.log("***GGGR top grouping="..dump(grouping).." idx="..idx.." replacewith="..replacewith.." incl_excl="..incl_excl)
+	if not incl_excl then incl_excl="INCLUSIVE" end
+	local s=grouping.list[idx].open
+	local e=grouping.list[idx].close
+	if incl_excl=="EXCLUSIVE" then 
+		s=grouping.list[idx].opene
+		e=grouping.list[idx].closee
+	end 
+	local origlen=e-s+1
+	local diff=string.len(replacewith)-origlen
+	local txt=grouping.txt
+	grouping.txt=string.sub(txt,1,s-1)..replacewith..string.sub(txt,e+1)
+	for i=1,#grouping.list,1 do
+		local gli=grouping.list[i]
+		if gli.open>s then gli.open=gli.open+diff end
+		if gli.opene>s then gli.opene=gli.opene+diff end
+		if gli.close>s then gli.close=gli.close+diff end
+		if gli.closee>s then gli.closee=gli.closee+diff end
+	end --for
+	--minetest.log("GGGR bot grouping="..dump(grouping))
+	--minetest.log("GGGR2 bot origtxt="..grouping.origtxt)
+	--minetest.log("GGGR2 bot     txt="..grouping.txt)
+return grouping.txt
+end--grouping_replace
+
+
+--[[ ##################################################################################
+func splitter
+--]]
+
+
+
+function simple_dialogs.func_splitter(line,funcname,parmcount)
+	if not parmcount then parmcount=1 end
+	local grouping=simple_dialogs.build_grouping_list(line,"(",")",funcname)
+	for g=1,#grouping.list,1 do
+		grouping.list[g].parm={}
+		local sectione=simple_dialogs.grouping_section(grouping,i,"EXCLUSIVE") --get section from string
+		local c=1
+		while c<=parmcount do
+			local comma=string.find(sectione,",")
+			if c<parmcount and comma then 
+					grouping.list[g].parm[c]=string.sub(sectione,1,comma-1)
+					sectione=string.sub(sectione,comma+1)
+			else
+				grouping.list[g].parm[c]=sectione
+				sectione=""
+			end
+			c=c+1
+		end --while
+	end --for
+	return grouping
+end --func_splitter
+
+
+
+
+
+--[[ ##################################################################################
+very generic utilities
+--]]
+
+function simple_dialogs.trim(s)
+	return s:match "^%s*(.-)%s*$"
+end
+
+
 
 
 function simple_dialogs.get_npcself_from_id(npcId)
@@ -573,119 +736,56 @@ end
 
 
 
-
---[[ *******************************************************************************
-Grouping
-These would probably be better separated into a different lua, perhaps even a different mod?
+--[[ ##################################################################################
+more simple_dialog specific utilities
 --]]
-
-
-
-
-
---this function will go through a string and build a list that tells what order
---to process parenthesis (or any other open close delimiter) in.
---example:
---12345678901234
---((3*(21+2))/4)
---list[1].open=5 close=10
---list[2].open=2 close=11
---list[3].open=1 close=14
---note that if you pass this txt that has bad syntax, it will not throw an error, but instead return an empty list
---list[].open and close are inclusive.  it includes the delimeter
---list[].opene and closee are exclusive.  it does NOT include the delimiter
---so in the above example:
---list[1].opene=6 close=9
---list[2].opene=3 close=10
---list[3].opene=2 close=13
-function simple_dialogs.build_grouping_list(txt,opendelim,closedelim)
-	--minetest.log("GGG build grouping top, txt="..txt)
-	local grouping={}
-	grouping.list={}
-	grouping.origtxt=txt --is this useful?
-	grouping.txt=txt
-	local openstack={}
-	local opendelim_len=string.len(opendelim)
-	grouping.opendelim_len=opendelim_len
-	local closedelim_len=string.len(closedelim)
-	grouping.closedelim_len=closedelim_len
-	--local i=string.find(txt,opendelim)-1 --start just before first open delim   (causes problems because of [ being a special character to find)
-	for i=1,string.len(txt),1 do
-		if string.sub(txt,i,i+opendelim_len-1)==opendelim then --open delim
-			openstack[#openstack+1]=i  --open pos onto stack.
-		elseif string.sub(txt,i,i+closedelim_len-1)==closedelim then -- close delim
-			--if you find parens out of order, just stop and return an empty list
-			if #openstack<1 then return {} end 
-			local l=#grouping.list+1
-			grouping.list[l]={}
-			local gll=grouping.list[l]
-			gll.open=openstack[#openstack]
-			gll.opene=gll.open+(opendelim_len)
-			gll.close=i+(closedelim_len-1)
-			gll.closee=i-1
-			--gll.section=string.sub(grouping.origtxt,gll.open,gll.close)
-			--gll.sectione=string.sub(grouping.origtxt,gll.opene,gll.closee)
-			table.remove(openstack,#openstack) --remove from stack
-		end --if
-	end --while
-	--minetest.log("GGG about to return")
-	return grouping
-end --build_grouping_list
-
-
-
-function simple_dialogs.grouping_section(grouping,i,incl_excl)
-	if not incl_excl then incl_excl="INCLUSIVE" end
-	--minetest.log("GGGs top i="..i.." incl_excl="..incl_excl)
-	local gli=grouping.list[i]
-	--minetest.log("GGGs after gli")
-	if incl_excl=="INCLUSIVE" then
-		--minetest.log("GGGs inclusive")
-		return string.sub(grouping.txt,gli.open,gli.close)
-	else
-		--minetest.log("GGGs exclusive") 
-		return string.sub(grouping.txt,gli.opene,gli.closee)
-	end
-end --grouping_section
-
-
-
-function simple_dialogs.grouping_sectione(grouping,i)
-	--minetest.log("GGGse i="..i.." grouping="..dump(grouping))
-	simple_dialogs.grouping_section(grouping,i,"EXCLUSIVE")
-end --grouping_sectione
-
-
-
-
-function simple_dialogs.grouping_replace(grouping,idx,replacewith,incl_excl)
-	--minetest.log("***GGGR top grouping="..dump(grouping).." idx="..idx.." replacewith="..replacewith.." incl_excl="..incl_excl)
-	if not incl_excl then incl_excl="INCLUSIVE" end
-	local s=grouping.list[idx].open
-	local e=grouping.list[idx].close
-	if incl_excl=="EXCLUSIVE" then 
-		s=grouping.list[idx].opene
-		e=grouping.list[idx].closee
-	end 
-	local origlen=e-s+1
-	local diff=string.len(replacewith)-origlen
-	local txt=grouping.txt
-	grouping.txt=string.sub(txt,1,s-1)..replacewith..string.sub(txt,e+1)
-	for i=1,#grouping.list,1 do
-		local gli=grouping.list[i]
-		if gli.open>s then gli.open=gli.open+diff end
-		if gli.opene>s then gli.opene=gli.opene+diff end
-		if gli.close>s then gli.close=gli.close+diff end
-		if gli.closee>s then gli.closee=gli.closee+diff end
-	end --for
-	--minetest.log("GGGR bot grouping="..dump(grouping))
-	--minetest.log("GGGR2 bot origtxt="..grouping.origtxt)
-	--minetest.log("GGGR2 bot     txt="..grouping.txt)
-return grouping.txt
-end--grouping_replace
-
 
 function simple_dialogs.register_varloader(func)
 	registered_varloaders[#registered_varloaders+1]=func
 	minetest.log("simple_dialogs-> register_varloader "..#registered_varloaders)
 end
+
+
+
+--this function executes the add(var,value) and rmv(var,value) and calc() functions
+function simple_dialogs.populate_funcs(npcself,line)
+	if npcself and npcself.dialog.vars and line then
+	
+		local grouping=simple_dialogs.build_func_splitter(line,"ADD",2)
+		if grouping then
+			for g=1,#grouping.list,1 do
+				local var=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[1]))
+				local value=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[2]))
+				local list
+				if npcself.dialog.vars[var] then 
+					list=npcself.dialog.vars[var] 
+					if string.sub(list,-1)~="|" then list=list.."|" end
+				else list="|" 
+				end
+				if not string.find(list,"|"..value.."|") then
+					list=list..value.."|"
+					line=simple_dialogs.grouping_replace(grouping,g,list,"INCLUSIVE")
+				end
+			end --for
+		end --if grouping
+		
+		local grouping=simple_dialogs.build_func_splitter(line,"RMV",2)
+		if grouping then
+			for g=1,#grouping.list,1 do
+				local var=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[1]))
+				local value=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[2]))
+				local list
+				if npcself.dialog.vars[var] then 
+					list=npcself.dialog.vars[var] 
+				else list="|" 
+				end
+				list=string.gsub("|"..value.."|","|")
+			end --for
+		end --if grouping
+		
+	end --if npcself
+end --populate_funcs
+		
+
+
+
