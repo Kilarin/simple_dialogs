@@ -155,7 +155,7 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
 	--for line in string.gmatch(dialogstr,'[^\r\n]+') do
 	--for line in string.gmatch(dialogstr,'[^\r\n]*') do  --this doubles blank lines
 	for line in (dialogstr..'\n'):gmatch'(.-)\r?\n' do --this works!
-		--minetest.log("simple_dialogs->loadstr: line="..line)
+		minetest.log("simple_dialogs->loadstr: line="..line)
 		local firstchar=string.sub(line,1,1)
 		if firstchar == chars.tag then  --we found a tag, process it
 			tag=line  --this might still include weight
@@ -211,21 +211,22 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
 			if spc then
 				local cmnd=string.upper(string.sub(line,2,spc-1))
 				local str=string.sub(line,spc+1) --rest of line without the command
-				--str=simple_dialogs.populate_vars(npcself,str) --populate any variables
-				--cmndcount=cmndcount+1
-				--dlg[tag][subtag].cmnd[cmndcount].cmnd=cmnd
-				--dlg[tag][subtag].cmnd[cmndcount].str=str
+				minetest.log("simple_dialogs-> ***ldfs cmnd="..cmnd.." str="..str)
 				if cmnd=="SET" then
-					local eq=string.find(str,"=",6)
+					minetest.log("simple_dialogs-> ldfs cmnd=set")
+					local eq=string.find(str,"=")
 					if eq then
+						minetest.log("simple_dialogs-> ldfs eq")
 						local varname=string.sub(str,1,eq-1)
 						local varval=string.sub(str,eq+1)
+						minetest.log("simple_dialogs-> ldfs varname="..varname.." varval="..varval)
 						if varval then
 							cmndcount=cmndcount+1
 							dlg[tag][subtag].cmnd[cmndcount]={}
 							dlg[tag][subtag].cmnd[cmndcount].cmnd=cmnd
 							dlg[tag][subtag].cmnd[cmndcount].varname=varname
 							dlg[tag][subtag].cmnd[cmndcount].varval=varval
+							minetest.log("simple_dialogs-> ldfs after dlg["..tag.."]["..subtag.."].cmnd="..dump(dlg[tag][subtag].cmnd))
 							--not that we have NOT populated any vars at that point, that happens when the dialog is actually displayed
 						end --if v
 					end --if eq
@@ -382,25 +383,28 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	--minetest.log("simple_dialogs->getdialogtar: before formspec npcself.dialog="..dump(npcself.dialog))
 	
 	--very first, run any commands
+	minetest.log("simple_dialogs->getdialogtar: dlg["..tag.."]["..subtag.."]="..dump(dlg[tag][subtag]))
 	for c=1,#dlg[tag][subtag].cmnd do
-		--minetest.log("simple_dialogs->getdialogtar: c="..c.." cmnd="..dump(dlg[tag][subtag].cmnd))
+		minetest.log("simple_dialogs->getdialogtar: c="..c.." cmnd="..dump(dlg[tag][subtag].cmnd))
 		local cmnd=dlg[tag][subtag].cmnd[c].cmnd
 		if cmnd=="SET" then
 			local varname=dlg[tag][subtag].cmnd[c].varname
 			local varval=dlg[tag][subtag].cmnd[c].varval
+			minetest.log("simple_dialogs-> ===***=== varname="..varname.." varval="..varval)
 			simple_dialogs.load_dialog_var(npcself,varname,varval)  --load the variable (varname filtering and populating vars happens inside this method)
+			
 		end --if SET
 	end --for c
 	
 	local say=dlg[tag][subtag].say
-	say=simple_dialogs.populate_vars(npcself,say)
+	say=simple_dialogs.populate_vars_and_funcs(npcself,say)
 	--
 	--now get the replylist
 	local replies=""
 	for r=1,#dlg[tag][subtag].reply,1 do
 		if r>1 then replies=replies.."," end
 		local rply=dlg[tag][subtag].reply[r].text
-		rply=simple_dialogs.populate_vars(npcself,rply)
+		rply=simple_dialogs.populate_vars_and_funcs(npcself,rply)
 		--if string.len(rply)>70 then rply=string.sub(rply,1,70)..string.char(10)..string.sub(rply,71) end
 		--TODO: this is a problem, wrapping once works, but is crowded.  wrapping 3 or more times overlaps text.
 		--TODO: also, how to determine what the REAL wrap length should be based on player screen width?
@@ -496,34 +500,17 @@ function simple_dialogs.load_dialog_var(npcself,varname,varval)
 	if npcself and varname then
 		if not npcself.dialog.vars then npcself.dialog.vars = {} end
 		if not varval then varval="" end
-		varname=simple_dialogs.populate_vars(npcself,varname)  --populate vars
+		minetest.log("simple_dialogs-> ---ldv bfr varname="..varname.." varval="..varval)
+		varname=simple_dialogs.populate_vars_and_funcs(npcself,varname)  --populate vars
 		varname=simple_dialogs.varname_filter(varname)  --filter down to only allowed chars
-		varval=simple_dialogs.populate_vars(npcself,varval)  --populate vars
+		varval=simple_dialogs.populate_vars_and_funcs(npcself,varval)  --populate vars
+		minetest.log("simple_dialogs-> ldv aft varname="..varname.." varval="..varval)
 		npcself.dialog.vars[varname] = varval  --add to variable list
+		minetest.log("simple_dialogs-> ldv end npcself.dialog.vars="..dump(npcself.dialog.vars))
 	end
 end --load_dialog_var
 
 
-
---this function populates variables within dialog text
-function simple_dialogs.populate_vars(npcself,line)
-	if npcself and npcself.dialog.vars then
-		local grouping=simple_dialogs.build_grouping_list(line,chars.varopen,chars.varclose)
-		--minetest.log("CCC vars="..dump(npcself.dialog.vars))
-		for i=1,#grouping.list,1 do
-			--local gli=grouping.list[i]
-			--minetest.log("CCC beforesectione i="..i.." grouping="..dump(grouping))
-			local sectione=simple_dialogs.grouping_section(grouping,i,"EXCLUSIVE") --get section from string
-			local k=simple_dialogs.varname_filter(sectione)  --k is our key value
-			--minetest.log("CCC i="..i.." sectione="..sectione.." k="..k)
-			if npcself.dialog.vars[k] then --is this if necessary?
-				line=simple_dialogs.grouping_replace(grouping,i,npcself.dialog.vars[k],"INCLUSIVE")
-			--line=string.sub(line,1,list[i].open-1)..string.upper(string.sub(line,list[i].open,list[i].close))..string.sub(line,list[i].close+1)
-			end --if
-		end --for
-	end --if
-	return line
-end --populate_vars
 
 
 
@@ -604,7 +591,7 @@ end --build_grouping_list
 
 function simple_dialogs.grouping_section(grouping,i,incl_excl)
 	if not incl_excl then incl_excl="INCLUSIVE" end
-	--minetest.log("GGGs top i="..i.." incl_excl="..incl_excl)
+	minetest.log("GGGs top i="..i.." incl_excl="..incl_excl.." grouping="..dump(grouping))
 	local gli=grouping.list[i]
 	--minetest.log("GGGs after gli")
 	if incl_excl=="INCLUSIVE" then
@@ -658,11 +645,12 @@ func splitter
 
 
 function simple_dialogs.func_splitter(line,funcname,parmcount)
+	minetest.log("simple_dialogs->  ---------------funcsplitter funcname="..funcname.." line="..line)
 	if not parmcount then parmcount=1 end
 	local grouping=simple_dialogs.build_grouping_list(line,"(",")",funcname)
 	for g=1,#grouping.list,1 do
 		grouping.list[g].parm={}
-		local sectione=simple_dialogs.grouping_section(grouping,i,"EXCLUSIVE") --get section from string
+		local sectione=simple_dialogs.grouping_section(grouping,g,"EXCLUSIVE") --get section from string
 		local c=1
 		while c<=parmcount do
 			local comma=string.find(sectione,",")
@@ -747,15 +735,41 @@ end
 
 
 
+
+--this function populates variables within dialog text
+function simple_dialogs.populate_vars(npcself,line)
+	if npcself and npcself.dialog.vars then
+		local grouping=simple_dialogs.build_grouping_list(line,chars.varopen,chars.varclose)
+		--minetest.log("CCC vars="..dump(npcself.dialog.vars))
+		for i=1,#grouping.list,1 do
+			--local gli=grouping.list[i]
+			--minetest.log("CCC beforesectione i="..i.." grouping="..dump(grouping))
+			local sectione=simple_dialogs.grouping_section(grouping,i,"EXCLUSIVE") --get section from string
+			local k=simple_dialogs.varname_filter(sectione)  --k is our key value
+			--minetest.log("CCC i="..i.." sectione="..sectione.." k="..k)
+			if npcself.dialog.vars[k] then --is this if necessary?
+				line=simple_dialogs.grouping_replace(grouping,i,npcself.dialog.vars[k],"INCLUSIVE")
+			--line=string.sub(line,1,list[i].open-1)..string.upper(string.sub(line,list[i].open,list[i].close))..string.sub(line,list[i].close+1)
+			end --if
+		end --for
+	end --if
+	return line
+end --populate_vars
+
+
 --this function executes the add(var,value) and rmv(var,value) and calc() functions
 function simple_dialogs.populate_funcs(npcself,line)
+	minetest.log("simple_dialogs-> pf top line="..line)
 	if npcself and npcself.dialog.vars and line then
-	
-		local grouping=simple_dialogs.build_func_splitter(line,"ADD",2)
+		local grouping=simple_dialogs.func_splitter(line,"ADD",2)
 		if grouping then
+			minetest.log("simple_dialogs-> add")
 			for g=1,#grouping.list,1 do
-				local var=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[1]))
-				local value=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[2]))
+				--populate_vars should always already have happened
+				--local var=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[1]))
+				--local value=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[2]))
+				local var=simple_dialogs.trim(grouping.list[g].parm[1])
+				local value=grouping.list[g].parm[2]
 				local list
 				if npcself.dialog.vars[var] then 
 					list=npcself.dialog.vars[var] 
@@ -768,12 +782,14 @@ function simple_dialogs.populate_funcs(npcself,line)
 				end
 			end --for
 		end --if grouping
-		
-		local grouping=simple_dialogs.build_func_splitter(line,"RMV",2)
+		local grouping=simple_dialogs.func_splitter(line,"RMV",2)
 		if grouping then
 			for g=1,#grouping.list,1 do
-				local var=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[1]))
-				local value=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[2]))
+				--populate_vars should always already have happened
+				--local var=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[1]))
+				--local value=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[2]))
+				local var=simple_dialogs.trim(grouping.list[g].parm[1])
+				local value=grouping.list[g].parm[2]
 				local list
 				if npcself.dialog.vars[var] then 
 					list=npcself.dialog.vars[var] 
@@ -782,10 +798,18 @@ function simple_dialogs.populate_funcs(npcself,line)
 				list=string.gsub("|"..value.."|","|")
 			end --for
 		end --if grouping
-		
 	end --if npcself
+	minetest.log("simple_dialogs-> pf bot line="..line)
+	return line
 end --populate_funcs
 		
 
 
+function simple_dialogs.populate_vars_and_funcs(npcself,line)
+	if npcself and line then
+		line=simple_dialogs.populate_vars(npcself,line)
+		line=simple_dialogs.populate_funcs(npcself,line)
+	end
+	return line
+end --populate_vars_and_funcs
 
