@@ -352,7 +352,7 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	local dlg=npcself.dialog.dlg  --shortcut to make things more readable
 	
 	--add playername to variables IF it was passed in
-	if pname then simple_dialogs.load_dialog_var(npcself,"PLAYERNAME",pname) end
+	if pname then simple_dialogs.save_dialog_var(npcself,"PLAYERNAME",pname) end
 	--load any variables from calling mod
 	for f=1,#registered_varloaders do
 		registered_varloaders[f](npcself,pname)
@@ -391,7 +391,7 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 			local varname=dlg[tag][subtag].cmnd[c].varname
 			local varval=dlg[tag][subtag].cmnd[c].varval
 			minetest.log("simple_dialogs-> ===***=== varname="..varname.." varval="..varval)
-			simple_dialogs.load_dialog_var(npcself,varname,varval)  --load the variable (varname filtering and populating vars happens inside this method)
+			simple_dialogs.save_dialog_var(npcself,varname,varval)  --load the variable (varname filtering and populating vars happens inside this method)
 			
 		end --if SET
 	end --for c
@@ -496,23 +496,35 @@ end) --register_on_player_receive_fields dialog
 
 
 
-function simple_dialogs.load_dialog_var(npcself,varname,varval)
+function simple_dialogs.save_dialog_var(npcself,varname,varval)
 	if npcself and varname then
 		if not npcself.dialog.vars then npcself.dialog.vars = {} end
 		if not varval then varval="" end
-		minetest.log("simple_dialogs-> ---ldv bfr varname="..varname.." varval="..varval)
+		minetest.log("simple_dialogs-> ---sdv bfr varname="..varname.." varval="..varval)
 		varname=simple_dialogs.populate_vars_and_funcs(npcself,varname)  --populate vars
 		varname=simple_dialogs.varname_filter(varname)  --filter down to only allowed chars
 		varval=simple_dialogs.populate_vars_and_funcs(npcself,varval)  --populate vars
-		minetest.log("simple_dialogs-> ldv aft varname="..varname.." varval="..varval)
+		minetest.log("simple_dialogs-> sdv aft varname="..varname.." varval="..varval)
 		npcself.dialog.vars[varname] = varval  --add to variable list
-		minetest.log("simple_dialogs-> ldv end npcself.dialog.vars="..dump(npcself.dialog.vars))
+		minetest.log("simple_dialogs-> sdv end npcself.dialog.vars="..dump(npcself.dialog.vars))
 	end
-end --load_dialog_var
+end --save_dialog_var
 
 
 
-
+function simple_dialogs.get_dialog_var(npcself,varname,defaultval)
+	if npcself and varname then
+		if not defaultval then defaultval="" end
+		if not npcself.dialog.vars then npcself.dialog.vars = {} end
+		minetest.log("simple_dialogs-> ---gdv bfr varname="..varname)
+		--varname=simple_dialogs.populate_vars_and_funcs(npcself,varname)  --populate vars  should already be done???
+		varname=simple_dialogs.varname_filter(varname)  --filter down to only allowed chars, no need for trim since spaces are not allowed
+		minetest.log("simple_dialogs-> ---gdv aft varname="..varname)
+		if npcself.dialog.vars[varname] then return npcself.dialog.vars[varname]
+		else return defaultval
+		end
+	end
+end --get_dialog_var
 
 --------------------------------------------------------------
 
@@ -545,8 +557,11 @@ These would probably be better separated into a different lua, perhaps even a di
 --list[3].opene=2 close=13
 --
 --if you pass funcname then only entries that start with funcname( are returned in the final list
+--for funcname we can NOT just pass funcname( as the opendelim, because if we did, grouping
+--would NOT take into account other functions or parenthesis.  example:
+--add(goodnums,calc(@[x]@+1))  <- we need add to recognize the calc function or it will get the wrong close delimiter
 function simple_dialogs.build_grouping_list(txt,opendelim,closedelim,funcname)
-	--minetest.log("GGG build grouping top, txt="..txt)
+	minetest.log("simple_dialogs-> bgl top, txt="..txt.." funcname="..dump(funcname))
 	if funcname then funcname=simple_dialogs.trim(string.upper(funcname)) end
 	local grouping={}
 	grouping.list={}
@@ -561,26 +576,34 @@ function simple_dialogs.build_grouping_list(txt,opendelim,closedelim,funcname)
 	for i=1,string.len(txt),1 do
 		if string.sub(txt,i,i+opendelim_len-1)==opendelim then --open delim
 			openstack[#openstack+1]=i  --open pos onto stack.
+			minetest.log("simple_dialogs-> bgl i="..i.." open  openstack["..#openstack.."]="..openstack[#openstack])
 			if funcname and ((i-#funcname)>0) and (string.upper(string.sub(txt,i-#funcname,i-1))==funcname) then
 				funcstack[#openstack]=funcname --just a flag to let us know this openstack matches our function
 				openstack[#openstack]=i-#funcname
+				minetest.log("simple_dialogs-> bgl open <FUNCNAME> openstack["..#openstack.."]="..openstack[#openstack].." funcname="..funcname.." #funcname="..#funcname)
 			end
 		elseif string.sub(txt,i,i+closedelim_len-1)==closedelim then -- close delim
+			minetest.log("simple_dialogs-> bgl i="..i.." close ")
 			--if you find parens out of order, just stop and return what you have so far
 			if #openstack<1 then return grouping end 
+			minetest.log("simple_dialogs-> bgl close openstack="..dump(openstack).." funcstack="..dump(funcstak))
 			if (not funcname) or (funcstack[#openstack]) then
+				minetest.log("simple_dialogs-> bgl notfuncname or is func")
 				local l=#grouping.list+1
 				grouping.list[l]={}
 				local gll=grouping.list[l]
 				gll.open=openstack[#openstack]
 				gll.opene=gll.open+(opendelim_len)
+				minetest.log("simple_dialogs-> bgl bfr func: gll="..dump(gll))
+				if funcname then gll.opene=gll.opene+#funcname end
 				gll.close=i+(closedelim_len-1)
 				gll.closee=i-1
+				minetest.log("simple_dialogs-> bgl end close: gll="..dump(gll))
 			end --if not funcname
 			--gll.section=string.sub(grouping.origtxt,gll.open,gll.close)
 			--gll.sectione=string.sub(grouping.origtxt,gll.opene,gll.closee)
 			table.remove(openstack,#openstack) --remove from stack
-			table.remove(funcstack,#openstack) --may or may not be there
+			table.remove(funcstack,#openstack+1) --may or may not be there, +1 because we just reduced the size of openstack by one
 		end --if
 	end --while
 	--minetest.log("GGG about to return")
@@ -648,9 +671,11 @@ function simple_dialogs.func_splitter(line,funcname,parmcount)
 	minetest.log("simple_dialogs->  ---------------funcsplitter funcname="..funcname.." line="..line)
 	if not parmcount then parmcount=1 end
 	local grouping=simple_dialogs.build_grouping_list(line,"(",")",funcname)
+	minetest.log("simple_dialogs-> fs grouping="..dump(grouping))
 	for g=1,#grouping.list,1 do
 		grouping.list[g].parm={}
 		local sectione=simple_dialogs.grouping_section(grouping,g,"EXCLUSIVE") --get section from string
+		minetest.log("simple_dialogs-> fs g="..g.." sectione="..sectione)
 		local c=1
 		while c<=parmcount do
 			local comma=string.find(sectione,",")
@@ -728,6 +753,8 @@ end
 more simple_dialog specific utilities
 --]]
 
+
+
 function simple_dialogs.register_varloader(func)
 	registered_varloaders[#registered_varloaders+1]=func
 	minetest.log("simple_dialogs-> register_varloader "..#registered_varloaders)
@@ -744,13 +771,10 @@ function simple_dialogs.populate_vars(npcself,line)
 		for i=1,#grouping.list,1 do
 			--local gli=grouping.list[i]
 			--minetest.log("CCC beforesectione i="..i.." grouping="..dump(grouping))
-			local sectione=simple_dialogs.grouping_section(grouping,i,"EXCLUSIVE") --get section from string
-			local k=simple_dialogs.varname_filter(sectione)  --k is our key value
+			local k=simple_dialogs.grouping_section(grouping,i,"EXCLUSIVE") --get section from string
+			--local k=simple_dialogs.varname_filter(sectione)  --k is our key value
 			--minetest.log("CCC i="..i.." sectione="..sectione.." k="..k)
-			if npcself.dialog.vars[k] then --is this if necessary?
-				line=simple_dialogs.grouping_replace(grouping,i,npcself.dialog.vars[k],"INCLUSIVE")
-			--line=string.sub(line,1,list[i].open-1)..string.upper(string.sub(line,list[i].open,list[i].close))..string.sub(line,list[i].close+1)
-			end --if
+			line=simple_dialogs.grouping_replace(grouping,i,simple_dialogs.get_dialog_var(npcself,k),"INCLUSIVE")
 		end --for
 	end --if
 	return line
@@ -763,23 +787,26 @@ function simple_dialogs.populate_funcs(npcself,line)
 	if npcself and npcself.dialog.vars and line then
 		local grouping=simple_dialogs.func_splitter(line,"ADD",2)
 		if grouping then
-			minetest.log("simple_dialogs-> add")
+			minetest.log("simple_dialogs-> pf add #grouping.list="..#grouping.list)
 			for g=1,#grouping.list,1 do
 				--populate_vars should always already have happened
 				--local var=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[1]))
 				--local value=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[2]))
-				local var=simple_dialogs.trim(grouping.list[g].parm[1])
+				local var=grouping.list[g].parm[1]
 				local value=grouping.list[g].parm[2]
 				local list
-				if npcself.dialog.vars[var] then 
-					list=npcself.dialog.vars[var] 
-					if string.sub(list,-1)~="|" then list=list.."|" end
-				else list="|" 
-				end
+				minetest.log("simple_dialogs-> pf var="..var.." value="..value)
+				--: simple_dialogs-> pf var=dd(list value=singleplayer
+				--if npcself.dialog.vars[var] then
+				list=simple_dialogs.get_dialog_var(npcself,var,"|")
+				if string.sub(list,-1)~="|" then list=list.."|" end --must always end in |
+				minetest.log("simple_dialogs-> dialog.vars="..dump(npcself.dialog.vars))
+				minetest.log("simple_dialogs-> bfradd list="..list) 
 				if not string.find(list,"|"..value.."|") then
-					list=list..value.."|"
+					list=list..value.."|" --safe because we guaranteed the list ends in | above
 					line=simple_dialogs.grouping_replace(grouping,g,list,"INCLUSIVE")
 				end
+				minetest.log("simple_dialogs-> aftadd list="..list) 
 			end --for
 		end --if grouping
 		local grouping=simple_dialogs.func_splitter(line,"RMV",2)
@@ -788,14 +815,14 @@ function simple_dialogs.populate_funcs(npcself,line)
 				--populate_vars should always already have happened
 				--local var=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[1]))
 				--local value=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[2]))
-				local var=simple_dialogs.trim(grouping.list[g].parm[1])
+				local var=grouping.list[g].parm[1]
 				local value=grouping.list[g].parm[2]
 				local list
-				if npcself.dialog.vars[var] then 
-					list=npcself.dialog.vars[var] 
-				else list="|" 
-				end
-				list=string.gsub("|"..value.."|","|")
+				--if npcself.dialog.vars[var] then 
+				list=simple_dialogs.get_dialog_var(npcself,var)
+				minetest.log("simple_dialogs-> pf rmv list="..list.."<")
+				list=string.gsub(list,"|"..value.."|","|")
+				line=simple_dialogs.grouping_replace(grouping,g,list,"INCLUSIVE")
 			end --for
 		end --if grouping
 	end --if npcself
