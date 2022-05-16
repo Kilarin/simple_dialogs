@@ -259,6 +259,16 @@ function simple_dialogs.varname_filter(varnamein)
 end --varname_filter
 
 
+
+--ONLY mathmatical symbols allowed. 
+--lua does not natively support ^
+function simple_dialogs.calc_filter(mathstrin)
+	local allowedchars = "0123456789%.%+%-%*%/" --characters allowed in math
+	
+	return string.upper(mathstrin):gsub("[^" .. allowedchars .. "]", "")
+end --calc_filter
+
+
 --this function lets you load a dialog for an npc from a file.  So you can store predetermined dialogs
 --as text files and load them for special npc or types of npcs (pirates, villagers, blacksmiths etc)
 --there are several dialog files already available in this mod.
@@ -785,19 +795,29 @@ end --populate_vars
 function simple_dialogs.populate_funcs(npcself,line)
 	minetest.log("simple_dialogs-> pf top line="..line)
 	if npcself and npcself.dialog.vars and line then
+		local grouping=simple_dialogs.func_splitter(line,"CALC",1)
+		if grouping then
+			minetest.log("simple_dialogs-> pf calc #grouping.list="..#grouping.list)
+			for g=1,#grouping.list,1 do
+				local mth=grouping.list[g].parm[1]
+				mth=simple_dialogs.calc_filter(mth)  --noting but number and mathmatical symbols allowed!
+				minetest.log("simple_dialogs-> pf calc filter mth="..mth)
+				pcall(function() mth=loadstring("return "..mth.."+0")() end)
+				if not mth then mth="error" end
+				minetest.log("simple_dialogs-> pf calc loadstr mth="..mth)
+				line=simple_dialogs.grouping_replace(grouping,g,mth,"INCLUSIVE")
+			end --for
+		end --if grouping CALC
 		local grouping=simple_dialogs.func_splitter(line,"ADD",2)
 		if grouping then
 			minetest.log("simple_dialogs-> pf add #grouping.list="..#grouping.list)
 			for g=1,#grouping.list,1 do
 				--populate_vars should always already have happened
-				--local var=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[1]))
-				--local value=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[2]))
 				local var=grouping.list[g].parm[1]
 				local value=grouping.list[g].parm[2]
 				local list
 				minetest.log("simple_dialogs-> pf var="..var.." value="..value)
 				--: simple_dialogs-> pf var=dd(list value=singleplayer
-				--if npcself.dialog.vars[var] then
 				list=simple_dialogs.get_dialog_var(npcself,var,"|")
 				if string.sub(list,-1)~="|" then list=list.."|" end --must always end in |
 				minetest.log("simple_dialogs-> dialog.vars="..dump(npcself.dialog.vars))
@@ -808,7 +828,7 @@ function simple_dialogs.populate_funcs(npcself,line)
 				end
 				minetest.log("simple_dialogs-> aftadd list="..list) 
 			end --for
-		end --if grouping
+		end --if grouping ADD
 		local grouping=simple_dialogs.func_splitter(line,"RMV",2)
 		if grouping then
 			for g=1,#grouping.list,1 do
@@ -824,7 +844,7 @@ function simple_dialogs.populate_funcs(npcself,line)
 				list=string.gsub(list,"|"..value.."|","|")
 				line=simple_dialogs.grouping_replace(grouping,g,list,"INCLUSIVE")
 			end --for
-		end --if grouping
+		end --if grouping RMV
 	end --if npcself
 	minetest.log("simple_dialogs-> pf bot line="..line)
 	return line
