@@ -795,6 +795,7 @@ end --populate_vars
 function simple_dialogs.populate_funcs(npcself,line)
 	minetest.log("simple_dialogs-> pf top line="..line)
 	if npcself and npcself.dialog.vars and line then
+		--CALC   calc(math)
 		local grouping=simple_dialogs.func_splitter(line,"CALC",1)
 		if grouping then
 			minetest.log("simple_dialogs-> pf calc #grouping.list="..#grouping.list)
@@ -818,17 +819,16 @@ function simple_dialogs.populate_funcs(npcself,line)
 				line=simple_dialogs.grouping_replace(grouping,g,mth,"INCLUSIVE")
 			end --for
 		end --if grouping CALC
+		--ADD  add(variable,stringtoadd)
 		local grouping=simple_dialogs.func_splitter(line,"ADD",2)
 		if grouping then
 			minetest.log("simple_dialogs-> pf add #grouping.list="..#grouping.list)
 			for g=1,#grouping.list,1 do
-				--populate_vars should always already have happened
-				local var=grouping.list[g].parm[1]
+				local var=grouping.list[g].parm[1]  --populate_vars should always already have happened
 				local value=grouping.list[g].parm[2]
-				local list
 				minetest.log("simple_dialogs-> pf var="..var.." value="..value)
 				--: simple_dialogs-> pf var=dd(list value=singleplayer
-				list=simple_dialogs.get_dialog_var(npcself,var,"|")
+				local list=simple_dialogs.get_dialog_var(npcself,var,"|")
 				if string.sub(list,-1)~="|" then list=list.."|" end --must always end in |
 				minetest.log("simple_dialogs-> dialog.vars="..dump(npcself.dialog.vars))
 				minetest.log("simple_dialogs-> bfradd list="..list) 
@@ -839,22 +839,30 @@ function simple_dialogs.populate_funcs(npcself,line)
 				minetest.log("simple_dialogs-> aftadd list="..list) 
 			end --for
 		end --if grouping ADD
+		--RMV  rmv(variable,stringtoremove)
 		local grouping=simple_dialogs.func_splitter(line,"RMV",2)
 		if grouping then
 			for g=1,#grouping.list,1 do
-				--populate_vars should always already have happened
-				--local var=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[1]))
-				--local value=simple_dialogs.populate_vars(npcself,simple_dialogs.trim(grouping.list[g].parm[2]))
-				local var=grouping.list[g].parm[1]
+				local var=grouping.list[g].parm[1]  --populate_vars should always already have happened
 				local value=grouping.list[g].parm[2]
-				local list
-				--if npcself.dialog.vars[var] then 
-				list=simple_dialogs.get_dialog_var(npcself,var)
+				local list=simple_dialogs.get_dialog_var(npcself,var)
 				minetest.log("simple_dialogs-> pf rmv list="..list.."<")
 				list=string.gsub(list,"|"..value.."|","|")
 				line=simple_dialogs.grouping_replace(grouping,g,list,"INCLUSIVE")
 			end --for
 		end --if grouping RMV
+		--ISINLIST  isinlist(variable,stringtolookfor)  returns 1(true) or 0(false)
+		local grouping=simple_dialogs.func_splitter(line,"ISINLIST",2)
+		if grouping then
+			for g=1,#grouping.list,1 do
+				local var=grouping.list[g].parm[1]  --populate_vars should always already have happened
+				local lookfor=grouping.list[g].parm[2]
+				local list=simple_dialogs.get_dialog_var(npcself,var)
+				local rtn="0"
+				if string.find(list,"|"..lookfor.."|") then rtn="1" end  --using string, numbers cause problems sometimes
+				line=simple_dialogs.grouping_replace(grouping,g,rtn,"INCLUSIVE")
+			end --for
+		end --if grouping ISINLIST		
 	end --if npcself
 	minetest.log("simple_dialogs-> pf bot line="..line)
 	return line
