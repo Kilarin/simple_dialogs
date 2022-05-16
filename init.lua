@@ -802,7 +802,17 @@ function simple_dialogs.populate_funcs(npcself,line)
 				local mth=grouping.list[g].parm[1]
 				mth=simple_dialogs.calc_filter(mth)  --noting but number and mathmatical symbols allowed!
 				minetest.log("simple_dialogs-> pf calc filter mth="..mth)
-				pcall(function() mth=loadstring("return "..mth.."+0")() end)
+				--pcall(function() mth=loadstring("return "..mth.."+0")() end)
+				--
+				--sandbox for security (do not allow arbitrary lua code execution)  
+				--This is overkill, the filtering should ensure this is safe, but why not?
+				--better too much security than too little
+				local env = {loadstring=loadstring}
+				local f=function() return loadstring("return "..mth.."+0")() end
+				setfenv(f,env)
+				pcall(function() mth=f() end) --pcall ensures this can NOT cause an error
+				--end sandbox
+				--
 				if not mth then mth="error" end
 				minetest.log("simple_dialogs-> pf calc loadstr mth="..mth)
 				line=simple_dialogs.grouping_replace(grouping,g,mth,"INCLUSIVE")
