@@ -149,7 +149,7 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
 	local weight=1
 	local say = ""
 	local replycount = 0
-	local cmndcount= 0
+	--local cmndcount= 0
 	--minetest.log("simple_dialogs-> dialogstr="..dialogstr)
 	--for line in dialogstr:gmatch '[^\n]+' do
 	--for line in string.gmatch(dialogstr,'[^\r\n]+') do
@@ -185,7 +185,7 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
 			end
 			say=""
 			replycount=0
-			cmndcount=0
+			--cmndcount=0
 			dlg[tag][subtag]={}
 			dlg[tag][subtag].weight=weight
 			dlg[tag][subtag].reply={}
@@ -211,26 +211,46 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
 			if spc then
 				local cmnd=string.upper(string.sub(line,2,spc-1))
 				local str=string.sub(line,spc+1) --rest of line without the command
-				minetest.log("simple_dialogs-> ***ldfs cmnd="..cmnd.." str="..str)
+				local c=#dlg[tag][subtag].cmnd+1
+				minetest.log("simple_dialogs-> ***ldfs c="..c.." cmnd="..cmnd.." str="..str)
 				if cmnd=="SET" then
 					minetest.log("simple_dialogs-> ldfs cmnd=set")
-					local eq=string.find(str,"=")
-					if eq then
-						minetest.log("simple_dialogs-> ldfs eq")
-						local varname=string.sub(str,1,eq-1)
-						local varval=string.sub(str,eq+1)
-						minetest.log("simple_dialogs-> ldfs varname="..varname.." varval="..varval)
-						if varval then
-							cmndcount=cmndcount+1
-							dlg[tag][subtag].cmnd[cmndcount]={}
-							dlg[tag][subtag].cmnd[cmndcount].cmnd=cmnd
-							dlg[tag][subtag].cmnd[cmndcount].varname=varname
-							dlg[tag][subtag].cmnd[cmndcount].varval=varval
-							minetest.log("simple_dialogs-> ldfs after dlg["..tag.."]["..subtag.."].cmnd="..dump(dlg[tag][subtag].cmnd))
-							--not that we have NOT populated any vars at that point, that happens when the dialog is actually displayed
-						end --if v
-					end --if eq
+					local cmndx=simple_dialogs.store_cmnd_set(str)
+					if cmndx then dlg[tag][subtag].cmnd[c]=cmndx end
 				end --if SET
+				--if must have all if conditions enclosed in one paren group, even single condition must be in parens
+				--if (condition) then 
+				--if ((condition) and (condition) or (condition)) then 
+				if cmnd=="IF" then
+					minetest.log("simple_dialogs-> ldfs cmnd=if")
+					local grouping=simple_dialogs.build_grouping_list(str,"(",")")
+					if grouping.first>0 then --find " THEN " after the last close paren
+						local t=string.find(string.upper(str)," THEN ",grouping.list[grouping.first].close)
+						if t then
+							minetest.log("simple_dialogs->ldf if t="..t)
+							local cmndx={}
+							cmndx.cmnd="IF"
+							cmndx.condstr=string.sub(str,1,t-1)
+							cmndx.cond={}
+							local thenstr=simple_dialogs.trim(string.sub(str,t+6)) --trim ensures no leading spaces
+							local spc=string.find(thenstr," ")
+							if spc then
+								local subcmnd=string.upper(string.sub(thenstr,1,spc-1))
+								if subcmnd=="SET" then
+									local ifcmnd=simple_dialogs.store_cmnd_set(string.sub(thenstr,spc+1))
+									if ifcmnd then
+										cmndx.ifcmnd=ifcmnd
+										dlg[tag][subtag].cmnd[c]=cmndx
+									end --if ifcmnd
+								end --if subcmnd=set
+							end --if spc
+						end --if t
+					end --if grouping.first
+					minetest.log("simple_dialogs-> ldfs if bot dlg["..tag.."]["..subtag.."].cmnd["..c.."]="..dump(dlg[tag][subtag].cmnd[c]))
+					--for i=1,#grouping.list,1 do
+					--local k=simple_dialogs.grouping_section(grouping,i,"EXCLUSIVE") --get section from string
+				end --if IF
+
 			end --if spc
 		--we check that a tag is set to avoid errors, just in case they put text before the first tag
 		--we check that replycount=0 because we are going to ignore any text between the replies and the next tag
@@ -242,6 +262,26 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
 	--minetest.log("simple_dialogs->loadstr npcself.dialog="..dump(npcself.dialog))
 end --load_dialog_from_string
 
+
+function simple_dialogs.store_cmnd_set(str)  --pass dlg[tag][subtag].cmnd[#
+	local cmnd=nil
+	local eq=string.find(str,"=")
+	if eq then
+		--minetest.log("simple_dialogs-> scs eq")
+		local varname=string.sub(str,1,eq-1)
+		local varval=string.sub(str,eq+1)
+		--minetest.log("simple_dialogs-> scs varname="..varname.." varval="..varval)
+		if varval then
+			cmnd={}
+			cmnd.cmnd="SET"
+			cmnd.varname=varname
+			cmnd.varval=varval
+			---minetest.log("simple_dialogs-> scs after dlg["..tag.."]["..subtag.."].cmnd="..dump(dlg[tag][subtag].cmnd))
+			--note that we have NOT populated any vars at that point, that happens when the dialog is actually displayed
+		end --if varval
+	end --if eq
+	return cmnd
+end --store_cmnd_set
 
 
 --tags will be upper cased, and have all characters stripped except for letters, digits, dash, and underline
@@ -263,8 +303,7 @@ end --varname_filter
 --ONLY mathmatical symbols allowed. 
 --lua does not natively support ^
 function simple_dialogs.calc_filter(mathstrin)
-	local allowedchars = "0123456789%.%+%-%*%/" --characters allowed in math
-	
+	local allowedchars = "0123456789%.%+%-%*%/%^%(%)" --characters allowed in math	
 	return string.upper(mathstrin):gsub("[^" .. allowedchars .. "]", "")
 end --calc_filter
 
@@ -348,8 +387,8 @@ end --get_dialog_formspec
 
 
 function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
-	--minetest.log("simple_dialogs->getdialogtar: pname="..pname.." tag="..tag)
-	--minetest.log("simple_dialogs->getdialogtar: npcself="..dump(npcself))
+	--minetest.log("simple_dialogs->gdtar: pname="..pname.." tag="..tag)
+	--minetest.log("simple_dialogs->gdtar: npcself="..dump(npcself))
 	--first we make certain everything is properly defined.  if there is an error we do NOT want to crash
 	--but we do return an error message that might help debug.
 	local errlabel="label[0.375,0.5; ERROR in get_dialog_text_and_replies, "
@@ -382,28 +421,76 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	--we loop through all the matching tags and select the first one for which our random number
 	--is less than or equal to that tags weight.
 	for t=1,tagmax,1 do
-		--minetest.log("simple_dialogs->getdialogtar: t="..t.." rnd="..rnd.." tag="..tag.." tagmax="..tagmax.." weight="..dlg[tag][t].weight)
+		--minetest.log("simple_dialogs->gdtar: t="..t.." rnd="..rnd.." tag="..tag.." tagmax="..tagmax.." weight="..dlg[tag][t].weight)
 		if rnd<=dlg[tag][t].weight then 
 			subtag=t
 			break 
 		end
 	end
 	--now subtag equals the selected subtag
-	--minetest.log("simple_dialogs->getdialogtar: tag="..tag.." subtag="..subtag)
-	--minetest.log("simple_dialogs->getdialogtar: before formspec npcself.dialog="..dump(npcself.dialog))
+	--minetest.log("simple_dialogs->gdtar: tag="..tag.." subtag="..subtag)
+	--minetest.log("simple_dialogs->gdtar: before formspec npcself.dialog="..dump(npcself.dialog))
 	
 	--very first, run any commands
-	minetest.log("simple_dialogs->getdialogtar: dlg["..tag.."]["..subtag.."]="..dump(dlg[tag][subtag]))
+	minetest.log("simple_dialogs->gdtar: tag="..tag.." subtag="..subtag)
+	minetest.log("simple_dialogs->gdtar: dlg["..tag.."]["..subtag.."]="..dump(dlg[tag][subtag]))
 	for c=1,#dlg[tag][subtag].cmnd do
-		minetest.log("simple_dialogs->getdialogtar: c="..c.." cmnd="..dump(dlg[tag][subtag].cmnd))
-		local cmnd=dlg[tag][subtag].cmnd[c].cmnd
-		if cmnd=="SET" then
-			local varname=dlg[tag][subtag].cmnd[c].varname
-			local varval=dlg[tag][subtag].cmnd[c].varval
-			minetest.log("simple_dialogs-> ===***=== varname="..varname.." varval="..varval)
-			simple_dialogs.save_dialog_var(npcself,varname,varval)  --load the variable (varname filtering and populating vars happens inside this method)
-			
-		end --if SET
+		local cmnd=dlg[tag][subtag].cmnd[c]
+		minetest.log("simple_dialogs->gdtar: c="..c.." cmnd="..dump(cmnd))
+		--local cmndname=dlg[tag][subtag].cmnd[c].cmnd
+		if cmnd.cmnd=="SET" then
+			--local varname=dlg[tag][subtag].cmnd[c].varname
+			--local varval=dlg[tag][subtag].cmnd[c].varval
+			--minetest.log("simple_dialogs-> ===***=== varname="..varname.." varval="..varval)
+			--simple_dialogs.save_dialog_var(npcself,varname,varval)  --load the variable (varname filtering and populating vars happens inside this method)
+			simple_dialogs.cmnd_set(npcself,cmnd)
+		elseif cmnd.cmnd=="IF" then
+		--cmnd.cmnd="IF"
+		--cmnd.cond="(angry==Y)"
+		--cmnd.ifcmnd.cmnd="SET"
+		--cmnd.ifcmnd.varname="mood"
+		--cmnd.ifcmnd.varval="I'm in a lousy mood today"
+			minetest.log("simple_dialogs->gdtar if cmnd="..dump(cmnd))
+			local condstr=simple_dialogs.populate_vars_and_funcs(npcself,cmnd.condstr)
+			minetest.log("simple_dialogs->gdtar if condstr="..condstr)
+			local ifgrouping=simple_dialogs.build_grouping_list(condstr,"(",")")
+			for i=1,#ifgrouping.list,1 do
+				local condsection=simple_dialogs.grouping_section(ifgrouping,i,"EXCLUSIVE")
+				minetest.log("simple dialogs->gdtar if i="..i.." ifgrouping="..dump(ifgrouping))
+				minetest.log("simple_dialogs->gdtar if condsection="..dump(condsection)) 
+
+				local op=simple_dialogs.split_on_operator(condsection)
+				if op then
+					local output="0"
+					if op.operator == ">=" then
+						if op.left >= op.right then output="1" else output="0" end
+					elseif op.operator == "<=" then
+						if op.left <= op.right then output="1" else output="0" end
+					elseif op.operator == "==" then
+						if op.left == op.right then output="1" else output="0" end
+					elseif op.operator == "~=" then
+						if op.left ~= op.right then output="1" else output="0" end
+					elseif op.operator == ">" then
+						if op.left > op.right then output="1" else output="0" end
+					elseif op.operator == "<" then
+						if op.left < op.right then output="1" else output="0" end
+					end --if op.operator
+				condstr=simple_dialogs.grouping_replace(ifgrouping,i,output,"EXCLUSIVE")
+				minetest.log("simple_dialogs->gdtar if left="..op.left.."| operator="..op.operator.." right="..op.right.."| output="..output.." condstr="..condstr)
+				end --if op 
+			end --for
+			minetest.log("simple_dialogs->gdtar if calcsdone cond="..condstr)
+			--TODO: test multiple parens, change AND to * and OR to +
+			local ifrslt=simple_dialogs.sandboxed_math_loadstring(condstr)
+						minetest.log("simple_dialogs->gdtar if calcsdone ifrslt="..ifrslt)
+			--now if rslt=0 test failed.  if rslt>0 test succeded
+			if ifrslt>0 then
+				if cmnd.ifcmnd.cmnd=="SET" then
+					minetest.log("simple_dialogs->gdtar if executing set")
+					simple_dialogs.cmnd_set(npcself,cmnd.ifcmnd)
+				end --ifcmnd SET
+			end --ifrst
+		end --if cmnd
 	end --for c
 	
 	local say=dlg[tag][subtag].say
@@ -436,6 +523,51 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 end --get_dialog_text_and_replies
 
 
+function simple_dialogs.split_on_operator(condstr)
+	if condstr then
+		local op={}
+		find_operator(op,condstr,">=")
+		find_operator(op,condstr,"<=")
+		find_operator(op,condstr,"==")
+		find_operator(op,condstr,"~=")
+		find_operator(op,condstr,">")
+		find_operator(op,condstr,"<")
+		
+		minetest.log("simple_dialogs->soo op="..dump(op))
+		
+		if op.pos then
+			op.left=string.sub(condstr,1,op.pos-1)
+			op.right=string.sub(condstr,op.pos+#op.operator)
+		else --no operator
+			op.left=condstr
+			op.operator="=="
+			op.right="1"
+			op.pos=#condstr+1  --shouldnt matter
+		end --if op.pos
+		return op
+	else return nil
+	end --if opstr
+end --split_on_operator
+
+
+function find_operator(op,condstr,operator)
+	local p=string.find(condstr,operator)
+	--of op was found, AND either op.pos is not set, or p is before previous op.pos
+	if p and (not op.pos or p > op.pos) then
+		op.operator=operator
+		op.pos=p
+	minetest.log("simple_dialogs->fo found operator="..operator.." op="..dump(op))
+	end --if 
+minetest.log("simple_dialogs->fo notfound operator="..operator.." op="..dump(op))
+end --find operator
+
+
+--pass dlg[tag][subtag].cmnd[c] which should contain .varname and .varval
+function simple_dialogs.cmnd_set(npcself,cmnd)
+	minetest.log("simple_dialogs-> cs bfr cmnd="..dump(cmnd))
+	simple_dialogs.save_dialog_var(npcself,cmnd.varname,cmnd.varval)  --load the variable (varname filtering and populating vars happens inside this method)
+	minetest.log("simple_dialogs-> cs aft cmnd="..dump(cmnd))
+end--cmnd_set
 
 
 --from http://lua-users.org/wiki/StringRecipes
@@ -479,9 +611,9 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	local subtag=contextdlg[pname].subtag
 	--minetest.log("simple_dialogs->receive_fields dialog: tag="..tag.." subtag="..subtag.." npcId="..npcId)
 	--minetest.log("simple_dialogs->receive_fields dialog: npcself="..dump(npcself))
-	if   not npcself 
-		or not npcself.dialog 
-		or not npcself.dialog.dlg[tag] 
+	if   not npcself
+		or not npcself.dialog
+		or not npcself.dialog.dlg[tag]
 		or not npcself.dialog.dlg[tag][subtag]
 		then 
 			minetest.log("simple_dialogs->receive_fields dialog: ERROR in dialog receive_fields: npcself.dialog.dlg[tag][subtag] not found")
@@ -577,6 +709,7 @@ function simple_dialogs.build_grouping_list(txt,opendelim,closedelim,funcname)
 	grouping.list={}
 	grouping.origtxt=txt --is this useful?
 	grouping.txt=txt
+	grouping.first=0  --this will store the grouping index of the first delim in the string
 	local openstack={}
 	local funcstack={}
 	local opendelim_len=string.len(opendelim)
@@ -608,6 +741,10 @@ function simple_dialogs.build_grouping_list(txt,opendelim,closedelim,funcname)
 				if funcname then gll.opene=gll.opene+#funcname end
 				gll.close=i+(closedelim_len-1)
 				gll.closee=i-1
+				--grouping.first is the first delim in the string.  if grouping.first=0 then we have not set it at all
+				if grouping.first==0 then grouping.first=l
+				elseif gll.open<grouping.list[grouping.first].open then grouping.first=l
+				end
 				minetest.log("simple_dialogs-> bgl end close: gll="..dump(gll))
 			end --if not funcname
 			--gll.section=string.sub(grouping.origtxt,gll.open,gll.close)
@@ -670,6 +807,18 @@ function simple_dialogs.grouping_replace(grouping,idx,replacewith,incl_excl)
 return grouping.txt
 end--grouping_replace
 
+--[[
+--remove all elements from a grouping that open after lastidx
+--(used when if processing to be certain no parens after the then are processed)
+function simple_dialogs.grouping_clear_after(grouping,lastidx)
+	if grouping and lastidx then
+		local newgrouping={}
+		for i=#grouping.list,1,-1 do  --iterate backwards because we are removing elements
+			if grouping.list[i].open>lastidx then table.remove(grouping.list[i]) end
+		end
+	end
+end--grouping_clear_after
+--]]
 
 --[[ ##################################################################################
 func splitter
@@ -862,12 +1011,27 @@ function simple_dialogs.populate_funcs(npcself,line)
 				if string.find(list,"|"..lookfor.."|") then rtn="1" end  --using string, numbers cause problems sometimes
 				line=simple_dialogs.grouping_replace(grouping,g,rtn,"INCLUSIVE")
 			end --for
-		end --if grouping ISINLIST		
+		end --if grouping ISINLIST
 	end --if npcself
 	minetest.log("simple_dialogs-> pf bot line="..line)
 	return line
 end --populate_funcs
 		
+
+function simple_dialogs.sandboxed_math_loadstring(mth)
+	if not mth then return "" end
+	--first we filter the string to allow NOTHING but numbers, parentheses, period, and +-*/^
+	mth=simple_dialogs.calc_filter(mth)
+	--now we sandbox (do not allow arbitrary lua code execution)  
+	--This is overkill, the filtering should ensure this is safe, but why not?
+	--better too much security than too little
+	local env = {loadstring=loadstring} --only loadstring can run
+	local f=function() return loadstring("return "..mth.."+0")() end
+	setfenv(f,env) --allow function f to only run in sandbox env
+	pcall(function() mth=f() end) --pcall ensures this can NOT cause an error
+	return mth
+end --sandboxed_math_loadstring
+
 
 
 function simple_dialogs.populate_vars_and_funcs(npcself,line)

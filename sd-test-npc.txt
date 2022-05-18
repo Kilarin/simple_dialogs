@@ -1,0 +1,68 @@
+===start
+Hello @[playername]@, this is a test conversation.
+Chose a reply to test various aspects of simple dialogs
+
+>npcvars:Test variables set by the npc mod that implements simple_dialogs
+>setvars:I'd like to test setting variables
+>iftest:using :If to set things conditionaly based on variables values
+
+:set angry=Y
+angry is set here, but its not used here.  Note that this line is ignored by simple_dialogs because it is not a command or a reply, and it cant be part of the dialog since it comes after the first reply.
+
+===npcvars
+The below variables are set in TenPlus1 MOBS REDO.  A different implementation may not have these variables or may have different ones.
+
+My name is @[npcname]@, and my owner is @[owner]@
+my hunger is @[food]@, my state is @[state]@, and my health is @[health]@
+
+>start:Back to the start
+>setvars:I'd like to test setting variables
+>iftest:using :If to set things conditionaly based on variables values
+
+===setvars
+This conversation tests setting variables within the dialog itself
+
+the variable location has been set to: @[location]@
+
+The list variable should contain a list of superheroes, with the player name added (using the add function)
+Are you on my list? @[list]@
+
+The variable list2 was set to the same as list, but batman was removed with the rmv function
+list2=@[list2]@
+
+the variable angry was set in a different tag, but can still be displayed here because variables live for as long as the npc lives.
+Am I angry? @[angry]@
+
+:set location=mountains
+:set list=|superman|spiderman|batman|wonderwoman|
+:set list=add(list,@[playername]@)
+:set list2=rmv(list,batman)
+
+>start:Back to the start
+>npcvars:Test variables set by the npc mod that implements simple_dialogs
+>iftest:using :If to set things conditionaly based on variables values
+
+===iftest
+The last line of this dialog will change based on the value of angry
+Am I angry right now? @[angry]@
+@[mood]@
+
+:set mood=I guess I'm just in a good mood
+:if (@[angry]@==Y) then set mood=I'm in a lousy mood today
+
+>angry:Make them angry!
+>happy:Make them not angry.
+>start:Back to the start
+>npcvars:Test variables set by the npc mod that implements simple_dialogs
+>setvars:I'd like to test setting variables
+
+
+===angry
+Ohhh!  That makes me so ANGRY!  angry=@[angry]@
+:set angry=Y
+>iftest:back to using :If to set things conditionaly based on variables values
+
+===happy
+Well, that was nice of you, I feel much better now!  angry=@[angry]@
+:set angry=N
+>iftest:back to using :If to set things conditionaly based on variables values

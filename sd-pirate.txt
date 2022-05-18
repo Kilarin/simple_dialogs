@@ -27,9 +27,15 @@ My name be @[npcname]@.  Not that it be any business of a bildge rat like you!
 If you be so nosey, then my hunger is @[food]@, my state is @[state]@, and my health is @[health]@
 Ya got any more questions, you should talk to me boss, @[owner]@
 by the way, are you on my list? @[list]@
+am I angry?  @[angry]@
+@[mood]@
 
 :set list=|superman|spiderman|batman|wonderwoman|
 :set list=add(list,@[playername]@)
+:set angry=Y
+:set mood=I guess I'm just in a good mood
+:if (angry==Y) then set mood=I'm in a lousy mood today
+
 >moretest:I'd like to do some more tests
 >bildge rat:What's a bildge rat?
 >arrg:Why do pirates always say Arrrgh?
