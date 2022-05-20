@@ -457,11 +457,12 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 			for i=1,#ifgrouping.list,1 do
 				local condsection=simple_dialogs.grouping_section(ifgrouping,i,"EXCLUSIVE")
 				minetest.log("simple dialogs->gdtar if i="..i.." ifgrouping="..dump(ifgrouping))
-				minetest.log("simple_dialogs->gdtar if condsection="..dump(condsection)) 
+				minetest.log("simple_dialogs->gdtar if condsection="..dump(condsection).." constr="..condstr) 
 
 				local op=simple_dialogs.split_on_operator(condsection)
+				minetest.log("simple_dialog->gdtar if op="..dump(op))
 				if op then
-					local output="0"
+					local output=""
 					if op.operator == ">=" then
 						if op.left >= op.right then output="1" else output="0" end
 					elseif op.operator == "<=" then
@@ -475,14 +476,23 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 					elseif op.operator == "<" then
 						if op.left < op.right then output="1" else output="0" end
 					end --if op.operator
-				condstr=simple_dialogs.grouping_replace(ifgrouping,i,output,"EXCLUSIVE")
-				minetest.log("simple_dialogs->gdtar if left="..op.left.."| operator="..op.operator.." right="..op.right.."| output="..output.." condstr="..condstr)
+					minetest.log("simple_dialogs->gdtar if output="..output.."<")
+					if op and op.operator>"" then --we found an operator
+						condstr=simple_dialogs.grouping_replace(ifgrouping,i,output,"EXCLUSIVE")
+						minetest.log("simple_dialogs->gdtar if left="..op.left.."| operator="..op.operator.." right="..op.right.."| output="..output.." condstr="..condstr)
+					else
+						--if no operator found, its HOPEFULLY just and and ors we do nothing.
+						minetest.log("simple_dialogs->gdtar if no operator found condstr="..condstr)
+					end --if output
 				end --if op 
 			end --for
-			minetest.log("simple_dialogs->gdtar if calcsdone cond="..condstr)
+			minetest.log("simple_dialogs->gdtar if before calc cond="..condstr)
 			--TODO: test multiple parens, change AND to * and OR to +
+			condstr=string.gsub(string.upper(condstr),"AND","*")
+			condstr=string.gsub(string.upper(condstr),"OR","+")
+			minetest.log("simple_dialogs->gdtar if and or subst cond="..condstr)
 			local ifrslt=simple_dialogs.sandboxed_math_loadstring(condstr)
-						minetest.log("simple_dialogs->gdtar if calcsdone ifrslt="..ifrslt)
+			minetest.log("simple_dialogs->gdtar if after calc ifrslt="..ifrslt)
 			--now if rslt=0 test failed.  if rslt>0 test succeded
 			if ifrslt>0 then
 				if cmnd.ifcmnd.cmnd=="SET" then
@@ -540,8 +550,8 @@ function simple_dialogs.split_on_operator(condstr)
 			op.right=string.sub(condstr,op.pos+#op.operator)
 		else --no operator
 			op.left=condstr
-			op.operator="=="
-			op.right="1"
+			op.operator=""
+			op.right=""
 			op.pos=#condstr+1  --shouldnt matter
 		end --if op.pos
 		return op

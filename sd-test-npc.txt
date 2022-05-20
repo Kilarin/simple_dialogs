@@ -7,7 +7,10 @@ Chose a reply to test various aspects of simple dialogs
 >iftest:using :If to set things conditionaly based on variables values
 
 :set angry=Y
-angry is set here, but its not used here.  Note that this line is ignored by simple_dialogs because it is not a command or a reply, and it cant be part of the dialog since it comes after the first reply.
+:set FriendList=|superman|spiderman|batman|wonderwoman|
+angry and friendlist are set here, but are not used here.  They are used elsewhere.
+Note that these lines are ignored by simple_dialogs because they are not a command or a reply,
+and they cant be part of the dialog since it comes after the first reply.
 
 ===npcvars
 The below variables are set in TenPlus1 MOBS REDO.  A different implementation may not have these variables or may have different ones.
@@ -25,18 +28,17 @@ This conversation tests setting variables within the dialog itself
 the variable location has been set to: @[location]@
 
 The list variable should contain a list of superheroes, with the player name added (using the add function)
-Are you on my list? @[list]@
+Are you on my Friend List? @[FriendList]@
 
-The variable list2 was set to the same as list, but batman was removed with the rmv function
-list2=@[list2]@
+The variable friendlist2 was set to the same as list, but batman was removed with the rmv function
+friendlist2=@[friendlist2]@
 
 the variable angry was set in a different tag, but can still be displayed here because variables live for as long as the npc lives.
 Am I angry? @[angry]@
 
 :set location=mountains
-:set list=|superman|spiderman|batman|wonderwoman|
-:set list=add(list,@[playername]@)
-:set list2=rmv(list,batman)
+:set FriendList=add(FriendList,@[playername]@)
+:set FriendList2=rmv(FriendList,batman)
 
 >start:Back to the start
 >npcvars:Test variables set by the npc mod that implements simple_dialogs
@@ -46,12 +48,21 @@ Am I angry? @[angry]@
 The last line of this dialog will change based on the value of angry
 Am I angry right now? @[angry]@
 @[mood]@
+My friendlist is @[friendlist]@
+And what do I think about you? @[friendstatus]@
+
 
 :set mood=I guess I'm just in a good mood
 :if (@[angry]@==Y) then set mood=I'm in a lousy mood today
+:if ( (@[angry]@==N) and (isinlist(FriendList,@[playername]@)) ) then set friendstatus=You are my very best friend!
+:if ( (@[angry]@==N) and (isinlist(FriendList,@[playername]@)==0) ) then set friendstatus=Hmmm, I don't really know you.
+:if ( (@[angry]@==Y) and (isinlist(FriendList,@[playername]@)) ) then set friendstatus=Some friend YOU are
+:if ( (@[angry]@==Y) and (isinlist(FriendList,@[playername]@)==0) ) then set friendstatus=I HATE you!
 
 >angry:Make them angry!
 >happy:Make them not angry.
+>addplayer:Add player to friend list
+>rmvplayer:Remove player from friend list
 >start:Back to the start
 >npcvars:Test variables set by the npc mod that implements simple_dialogs
 >setvars:I'd like to test setting variables
@@ -65,4 +76,14 @@ Ohhh!  That makes me so ANGRY!  angry=@[angry]@
 ===happy
 Well, that was nice of you, I feel much better now!  angry=@[angry]@
 :set angry=N
+>iftest:back to using :If to set things conditionaly based on variables values
+
+===addplayer
+Well, I guess I'll just put your name in my little black book as a friend.
+:set FriendList=add(FriendList,@[playername]@)
+>iftest:back to using :If to set things conditionaly based on variables values
+
+===rmvplayer
+I am erasing your name from my little black book!  You are no longer my friend!
+:set FriendList=rmv(FriendList,@[playername]@)
 >iftest:back to using :If to set things conditionaly based on variables values
