@@ -191,8 +191,7 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
 			dlg[tag][subtag].reply={}
 			dlg[tag][subtag].cmnd={}
 		elseif firstchar == chars.reply and tag ~= "" then  --we found a reply, process it
-			--if we got a reply, then the say is ended, add it
-			dlg[tag][subtag].say=say
+			--if we got a reply, then the say is ended
 			--split into target and reply
 			local i, j = string.find(line,":")
 			if i==nil then 
@@ -256,8 +255,31 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
 		--we check that replycount=0 because we are going to ignore any text between the replies and the next tag
 		elseif tag~="" and replycount==0 then  --we found a dialog line, process it
 			say=say..line.."\n"
+			--doing this every time is overkill, but avoid the problem of a tag without replies not recording the say
+			--TODO: why bother with the say variable at all?
+			dlg[tag][subtag].say=say
 		end
 	end --for line in dialog
+	--now double check that every entry has at least 1 reply
+	--minetest.log("simple_dialogs-> ldfs ensurereplies before")
+	--minetest.log("simple_dialogs-> ldfs ensurereplies dlg="..dump(dlg))
+	--for i,v in pairs(dlg) do print("i="..i) end
+	for t,v in pairs(dlg) do
+		minetest.log("simple_dialogs-> ldfs ensurereplies t top t="..t)
+		for st=1,#dlg[t],1 do
+			--minetest.log("simple_dialogs-> ldfs ensurereplies t="..t.." st="..st)
+			--minetest.log("simple_dialogs-> ldfs ensurereplies -- reply="..dump(dlg[t][st].reply))
+			--I could also FORCE an end tag onto every replylist that didn't have one. consider that in the future.
+			if not dlg[t][st].reply or not dlg[t][st].reply[1] then
+				--minetest.log("simple_dialogs-> ldfs ensurereplies dlg["..t.."]["..st.."].reply being added") 
+				dlg[t][st].reply={}
+				dlg[t][st].reply[1]={}
+				dlg[t][st].reply[1].target="END"
+				dlg[t][st].reply[1].text="END"
+			end --if
+		end --for st
+	end --for t
+	--minetest.log("simple_dialogs-> ldfs ensurereplies after")
 	npcself.dialog.text=dialogstr
 	--minetest.log("simple_dialogs->loadstr npcself.dialog="..dump(npcself.dialog))
 end --load_dialog_from_string
@@ -505,6 +527,7 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	
 	local say=dlg[tag][subtag].say
 	say=simple_dialogs.populate_vars_and_funcs(npcself,say)
+	if not say then say="" end
 	--
 	--now get the replylist
 	local replies=""
@@ -522,6 +545,7 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	local y=0.5
 	local x2=0.375
 	local y2=y+8.375
+	--TODO: this crashes if there are no replies.  either escape this or default an "end" reply
 	formspec={
 		"textarea["..x..","..y..";9.4,8;;;"..minetest.formspec_escape(say).."]",
 		"textlist["..x2..","..y2..";27,5;reply;"..replies.."]"  --note that replies were escaped as they were added
@@ -962,18 +986,7 @@ function simple_dialogs.populate_funcs(npcself,line)
 				local mth=grouping.list[g].parm[1]
 				mth=simple_dialogs.calc_filter(mth)  --noting but number and mathmatical symbols allowed!
 				minetest.log("simple_dialogs-> pf calc filter mth="..mth)
-				--pcall(function() mth=loadstring("return "..mth.."+0")() end)
-				--
-				--sandbox for security (do not allow arbitrary lua code execution)  
-				--This is overkill, the filtering should ensure this is safe, but why not?
-				--better too much security than too little
-				local env = {loadstring=loadstring}
-				local f=function() return loadstring("return "..mth.."+0")() end
-				setfenv(f,env)
-				pcall(function() mth=f() end) --pcall ensures this can NOT cause an error
-				--end sandbox
-				--
-				if not mth then mth="error" end
+				line=simple_dialogs.sandboxed_math_loadstring(mth)
 				minetest.log("simple_dialogs-> pf calc loadstr mth="..mth)
 				line=simple_dialogs.grouping_replace(grouping,g,mth,"INCLUSIVE")
 			end --for
@@ -1039,6 +1052,7 @@ function simple_dialogs.sandboxed_math_loadstring(mth)
 	local f=function() return loadstring("return "..mth.."+0")() end
 	setfenv(f,env) --allow function f to only run in sandbox env
 	pcall(function() mth=f() end) --pcall ensures this can NOT cause an error
+	if not mth then mth="error" end
 	return mth
 end --sandboxed_math_loadstring
 
