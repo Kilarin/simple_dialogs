@@ -123,7 +123,7 @@ end --add_dialog_control_to_formspec
 --then use THIS in your register_on_player_receive_fields function
 function simple_dialogs.process_simple_dialog_control_fields(pname,npcself,fields)
 	if fields["save"] or fields["saveandtest"] then
-		simple_dialogs.load_dialog_from_string(npcself,fields["dialog"],pname)
+		simple_dialogs.load_dialog_from_string(npcself,fields["dialog"])
 	end --save or saveandtest
 	if fields["saveandtest"] then
 		simple_dialogs.show_dialog_formspec(pname,npcself,"START")
@@ -152,21 +152,24 @@ end --load_dialog_from_file
 --normally displayed to someone who is NOT the entity owner
 --call with tag=START for starting a dialog, or with no tag and it will default to start.
 function simple_dialogs.show_dialog_formspec(pname,npcself,tag)
-	if not tag then tag="START" end
-	contextdlg[pname]={}
-	contextdlg[pname].npcId=simple_dialogs.set_npc_id(npcself) --store the npc id in local context so we can use it when the form is returned.  (cant store self)
-	local formspec={
-		"formspec_version[4]",
-		"size[28,15]", 
-		"position[0.05,0.05]",
-		"anchor[0,0]",
-		"no_prepend[]",        --must be present for below transparent setting to work
-		"bgcolor[;neither;]",  --make the formspec background transparent
-		"box[0.370,0.4;9.6,8.4;#222222FF]", --draws a box background behind our text area
-		simple_dialogs.dialog_to_formspec(pname,npcself,tag)
-	}
-	formspec=table.concat(formspec,"")
-	minetest.show_formspec(pname,"simple_dialogs:dialog",formspec)
+	--only show the dialog formspec if there is a dialog
+	if npcself and npcself.dialog and npcself.dialog.dlg and npcself.dialog.text and npcself.dialog.text~="" then 
+		if not tag then tag="START" end
+		contextdlg[pname]={}
+		contextdlg[pname].npcId=simple_dialogs.set_npc_id(npcself) --store the npc id in local context so we can use it when the form is returned.  (cant store self)
+		local formspec={
+			"formspec_version[4]",
+			"size[28,15]", 
+			"position[0.05,0.05]",
+			"anchor[0,0]",
+			"no_prepend[]",        --must be present for below transparent setting to work
+			"bgcolor[;neither;]",  --make the formspec background transparent
+			"box[0.370,0.4;9.6,8.4;#222222FF]", --draws a box background behind our text area
+			simple_dialogs.dialog_to_formspec(pname,npcself,tag)
+		}
+		formspec=table.concat(formspec,"")
+		minetest.show_formspec(pname,"simple_dialogs:dialog",formspec)
+	end
 end --show_dialog_formspec
 
 
@@ -207,6 +210,8 @@ possible commands are:
 note that :if requires that the condition be in parenthesis.
 
 The final structure of the dialog table will look like this:
+npcself.dialog.vars                        (variable values for this npc)
+npcself.dialog.text                        (the unprocessed dialog string)
 npcself.dialog.
 dlg[tag][subtag].weight                    (the weight for this subtag when chosen by random)
 dlg[tag][subtag].say                       (the text of the dialog that the npc says)
@@ -223,8 +228,7 @@ dlg[tag][subtag].cmnd[cmndcount].condstr   (the condition string, a==b etc, must
 dlg[tag][subtag].cmnd[cmndcount].ifcmnd.cmnd  (SET for now, GOTO later?, entire structure of subcommand will be here)
 
 --]]
---TODO: split the huge ifelse into methods?
-function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)  --TODO:pname is not used in here anywhere, remove it?
+function simple_dialogs.load_dialog_from_string(npcself,dialogstr)  
 	npcself.dialog = {}
 	npcself.dialog.dlg={}
 	npcself.dialog.vars = {}
@@ -416,6 +420,7 @@ end --load_dialog_cmnd_if
 convert Dialog table into a formspec
 --]]
 
+
 --[[
 this is the other side of load_dialog_from_string.  dialog_to_formspec turns a dialog table into 
 a formspec with the say text and reply list.
@@ -444,7 +449,8 @@ function simple_dialogs.dialog_to_formspec(pname,npcself,tag)
 	elseif not tag or tag==nil then return errlabel.." tag passed was nil]"
 	elseif not npcself.dialog.dlg[tag] then return errlabel.. " tag "..tag.." not found in the dialog]"
 	end
-	
+	--TODO: non-owned npcs without a dialog should not show any dialog formspec at all
+	--or at least should show something better than an error
 	local dlg=npcself.dialog.dlg  --shortcut to make things more readable
 	
 	--add playername to variables IF it was passed in
