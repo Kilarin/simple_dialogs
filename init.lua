@@ -1,6 +1,6 @@
 simple_dialogs = { }
 
-local S = simple_dialogs.intllib  --TODO integrate with intllib
+local S = simple_dialogs.intllib  --TODO: ensure integration with intllib is working properly, I dont think it is now
 
 -- simple dialogs by Kilarin
 
@@ -66,7 +66,6 @@ Methods used when integrating simple_dialogs with an entity mod
 --	end)--register_on_leaveplayer
 function simple_dialogs.register_varloader(func)
 	registered_varloaders[#registered_varloaders+1]=func
-	minetest.log("simple_dialogs-> register_varloader "..#registered_varloaders)
 end
 
 
@@ -243,7 +242,7 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr)
 	
 	--loop through each line in the string (including blank lines) 
 	for line in (dialogstr..'\n'):gmatch'(.-)\r?\n' do 
-		minetest.log("simple_dialogs->loadstr: line="..line)
+		--minetest.log("simple_dialogs->ldfs line="..line)
 		wk.line=line
 		local firstchar=string.sub(wk.line,1,1)
 
@@ -256,9 +255,9 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr)
 			if spc then
 				local cmnd=string.upper(string.sub(wk.line,2,spc-1))
 				local str=string.sub(wk.line,spc+1) --rest of line without the command				
-				--minetest.log("simple_dialogs-> ***ldfs c="..c.." cmnd="..cmnd.." str="..str)
+				--minetest.log("simple_dialogs->ldfs c="..c.." cmnd="..cmnd.." str="..str)
 				if cmnd=="SET" then
-					minetest.log("simple_dialogs-> ldfs cmnd=set")
+					--minetest.log("simple_dialogs->ldfs cmnd=set")
 					local cmndx=simple_dialogs.load_dialog_cmnd_set(str)
 					local cmndcount=#wk.dlg[wk.tag][wk.subtag].cmnd+1
 					if cmndx then wk.dlg[wk.tag][wk.subtag].cmnd[cmndcount]=cmndx end
@@ -269,8 +268,6 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr)
 		--we check that a tag is set to avoid errors, just in case they put text before the first tag
 		--we check that replycount=0 because we are going to ignore any text between the replies and the next tag
 		elseif wk.tag~="" and #wk.dlg[wk.tag][wk.subtag].reply==0 then  --we found a dialog line, process it
-			--doing this every time is overkill, but avoids the problem of a tag without replies not recording the say
-			--TODO: why bother with the say variable at all?
 			wk.dlg[wk.tag][wk.subtag].say=wk.dlg[wk.tag][wk.subtag].say..wk.line.."\n"
 		end
 	end --for line in dialog
@@ -287,7 +284,7 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr)
 		end --for st
 	end --for t
 	npcself.dialog.text=dialogstr
-	minetest.log("simple_dialogs-> ldfs end dlg="..dump(wk.dlg))
+	--minetest.log("simple_dialogs->ldfs end dlg="..dump(wk.dlg))
 end --load_dialog_from_string
 
 
@@ -308,7 +305,7 @@ function simple_dialogs.load_dialog_tag(wk)
 		local w=string.sub(wk.line,i+1,k-1) --get the number in parenthesis (weight)
 		weight=tonumber(w)
 		if weight==nil or weight<1 then weight=1 end
-		minetest.log("simple_dialogs->ldt line="..wk.line.." tag="..wk.tag.." i="..i.." k="..k.." w="..w)
+		--minetest.log("simple_dialogs->ldt line="..wk.line.." tag="..wk.tag.." i="..i.." k="..k.." w="..w)
 	end
 	--strip tag down to only allowed characters
 	wk.tag=simple_dialogs.tag_filter(wk.tag) --this also strips all leading = signs
@@ -362,16 +359,16 @@ function simple_dialogs.load_dialog_cmnd_set(str)  --pass dlg[tag][subtag].cmnd[
 	local cmnd=nil
 	local eq=string.find(str,"=")
 	if eq then
-		--minetest.log("simple_dialogs-> scs eq")
+		--minetest.log("simple_dialogs->ldcs eq")
 		local varname=string.sub(str,1,eq-1)
 		local varval=string.sub(str,eq+1)
-		--minetest.log("simple_dialogs-> scs varname="..varname.." varval="..varval)
+		--minetest.log("simple_dialogs->ldcs varname="..varname.." varval="..varval)
 		if varval then
 			cmnd={}
 			cmnd.cmnd="SET"
 			cmnd.varname=varname
 			cmnd.varval=varval
-			---minetest.log("simple_dialogs-> scs after dlg["..tag.."]["..subtag.."].cmnd="..dump(dlg[tag][subtag].cmnd))
+			---minetest.log("simple_dialogs->ldcs after dlg["..tag.."]["..subtag.."].cmnd="..dump(dlg[tag][subtag].cmnd))
 			--note that we have NOT populated any vars at that point, that happens when the dialog is actually displayed
 		end --if varval
 	end --if eq
@@ -386,12 +383,12 @@ end --load_dialog_cmnd_set
 --if (condition) then 
 --if ((condition) and (condition) or (condition)) then 
 function simple_dialogs.load_dialog_cmnd_if(wk,str)
-	--minetest.log("simple_dialogs-> ldfs cmnd=if")
+	--minetest.log("simple_dialogs->ldci top")
 	local grouping=simple_dialogs.build_grouping_list(str,"(",")")
 	if grouping.first>0 then --find " THEN " after the last close paren
 		local t=string.find(string.upper(str)," THEN ",grouping.list[grouping.first].close)
 		if t then
-			--minetest.log("simple_dialogs->ldf if t="..t)
+			--minetest.log("simple_dialogs->ldci t="..t)
 			local cmndx={}
 			cmndx.cmnd="IF"
 			cmndx.condstr=string.sub(str,1,t-1)
@@ -410,7 +407,7 @@ function simple_dialogs.load_dialog_cmnd_if(wk,str)
 			end --if spc
 		end --if t
 	end --if grouping.first
-	--minetest.log("simple_dialogs-> ldfs if bot dlg["..wk.tag.."]["..wk.subtag.."].cmnd["..c.."]="..dump(wk.dlg[wk.tag][wk.subtag].cmnd[c]))
+	--minetest.log("simple_dialogs->ldci bot dlg["..wk.tag.."]["..wk.subtag.."].cmnd["..c.."]="..dump(wk.dlg[wk.tag][wk.subtag].cmnd[c]))
 end --load_dialog_cmnd_if
 
 
@@ -439,8 +436,8 @@ this means we can just roll a random number between 1 and 13,
 then select the first subtag for which our random number is less than or equal to its weight.
 --]]
 function simple_dialogs.dialog_to_formspec(pname,npcself,tag)
-	--minetest.log("simple_dialogs->gdtar: pname="..pname.." tag="..tag)
-	--minetest.log("simple_dialogs->gdtar: npcself="..dump(npcself))
+	--minetest.log("simple_dialogs->dtf pname="..pname.." tag="..tag)
+	--minetest.log("simple_dialogs->dtf: npcself="..dump(npcself))
 	--first we make certain everything is properly defined.  if there is an error we do NOT want to crash
 	--but we do return an error message that might help debug.
 	local errlabel="label[0.375,0.5; ERROR in dialog_to_formspec, "
@@ -457,7 +454,6 @@ function simple_dialogs.dialog_to_formspec(pname,npcself,tag)
 	--load any variables from calling mod
 	for f=1,#registered_varloaders do
 		registered_varloaders[f](npcself,pname)
-		--minetest.log("simple_dialogs-> ran registered_varloader "..f)
 	end
 
 	local formspec={}
@@ -472,22 +468,22 @@ function simple_dialogs.dialog_to_formspec(pname,npcself,tag)
 	--we loop through all the matching tags and select the first one for which our random number
 	--is less than or equal to that tags weight.
 	for st=1,subtagmax,1 do
-		--minetest.log("simple_dialogs->gdtar: t="..t.." rnd="..rnd.." tag="..tag.." subtagmax="..subtagmax.." weight="..dlg[tag][t].weight)
+		--minetest.log("simple_dialogs->dtf t="..t.." rnd="..rnd.." tag="..tag.." subtagmax="..subtagmax.." weight="..dlg[tag][t].weight)
 		if rnd<=dlg[tag][st].weight then 
 			subtag=st
 			break 
 		end
 	end
 	--now subtag equals the selected subtag
-	--minetest.log("simple_dialogs->gdtar: tag="..tag.." subtag="..subtag)
-	--minetest.log("simple_dialogs->gdtar: before formspec npcself.dialog="..dump(npcself.dialog))
+	--minetest.log("simple_dialogs->dtf tag="..tag.." subtag="..subtag)
+	--minetest.log("simple_dialogs->dtf before formspec npcself.dialog="..dump(npcself.dialog))
 	
 	--very first, run any commands
-	--minetest.log("simple_dialogs->gdtar: tag="..tag.." subtag="..subtag)
-	--minetest.log("simple_dialogs->gdtar: dlg["..tag.."]["..subtag.."]="..dump(dlg[tag][subtag]))
+	--minetest.log("simple_dialogs->dtf tag="..tag.." subtag="..subtag)
+	--minetest.log("simple_dialogs->dtf dlg["..tag.."]["..subtag.."]="..dump(dlg[tag][subtag]))
 	for c=1,#dlg[tag][subtag].cmnd do
 		local cmnd=dlg[tag][subtag].cmnd[c]
-		minetest.log("simple_dialogs->gdtar: c="..c.." cmnd="..dump(cmnd))
+		--minetest.log("simple_dialogs->dtf c="..c.." cmnd="..dump(cmnd))
 		--local cmndname=dlg[tag][subtag].cmnd[c].cmnd
 		if cmnd.cmnd=="SET" then
 			simple_dialogs.execute_cmnd_set(npcself,cmnd)
@@ -495,7 +491,7 @@ function simple_dialogs.dialog_to_formspec(pname,npcself,tag)
 			simple_dialogs.execute_cmnd_if(npcself,cmnd)
 		end --if cmnd
 	end --for c
-	
+	--
 	--populate the say portion of the dialog, that is simple.
 	local say=dlg[tag][subtag].say
 	say=simple_dialogs.populate_vars_and_funcs(npcself,say)
@@ -533,9 +529,9 @@ end --dialog_to_formspec
 --cmnd.varname
 --cmnd.varval
 function simple_dialogs.execute_cmnd_set(npcself,cmnd)
-	minetest.log("simple_dialogs-> cs bfr cmnd="..dump(cmnd))
+	--minetest.log("simple_dialogs->cs bfr cmnd="..dump(cmnd))
 	simple_dialogs.save_dialog_var(npcself,cmnd.varname,cmnd.varval)  --load the variable (varname filtering and populating vars happens inside this method)
-	minetest.log("simple_dialogs-> cs aft cmnd="..dump(cmnd))
+	--minetest.log("simple_dialogs->cs aft cmnd="..dump(cmnd))
 end--cmnd_set
 
 
@@ -544,6 +540,7 @@ end--cmnd_set
 --pass dlg[tag][subtag].cmnd[c] 
 --cmnd.cmnd="IF"
 --cmnd.condstr  This will be the condition, example: ( ( (hitpoints<10) and (name=="badguy") ) or (status=="asleep") )
+--cmnd.ifcmnd   This is the command that will be executed if condstr evaluates as true. full cmnd table, right now SET is only option, GOTO later?, entire structure of subcommand will be here
 function simple_dialogs.execute_cmnd_if(npcself,cmnd)
 	--minetest.log("simple_dialogs->eci cmnd="..dump(cmnd))
 	--first thing, populate any vars and run any functions in the condition string
@@ -563,10 +560,10 @@ function simple_dialogs.execute_cmnd_if(npcself,cmnd)
 	--replace AND with * and OR with + and we have a mathematical equation that will resolve the boolean logic.
 	condstr=string.gsub(string.upper(condstr),"AND","*")
 	condstr=string.gsub(string.upper(condstr),"OR","+")
-	minetest.log("simple_dialogs->eci if and or subst cond="..condstr)
+	--minetest.log("simple_dialogs->eci if and or subst cond="..condstr)
 	--run the string through our sandboxed and filtered math function
 	local ifrslt=simple_dialogs.sandboxed_math_loadstring(condstr)
-	minetest.log("simple_dialogs->eci if after calc ifrslt="..ifrslt)
+	--minetest.log("simple_dialogs->eci if after calc ifrslt="..ifrslt)
 	--now if ifrslt=0 test failed.  if ifrslt>0 test succeded
 	if ifrslt>0 then
 		if cmnd.ifcmnd.cmnd=="SET" then
@@ -574,20 +571,23 @@ function simple_dialogs.execute_cmnd_if(npcself,cmnd)
 			simple_dialogs.execute_cmnd_set(npcself,cmnd.ifcmnd)
 		end --ifcmnd SET
 	end --ifrst
-end --cmnd_if
+end --execute_cmnd_if
 
 
 
-
-
-
---[[
-
---]]
-
+--this is used by execute_cmnd_if
+--it takes in a condstr that is ONE equation from a possibly more complex if cond str.
+--something like (hitpoints<10), it MUST be enclosed in parenthesis.
+--it splits it up and returns a table op with the structure:
+--op.pos       where the operator was found 
+--op.left      what was on the left side of the operator
+--op.operator  the operator string
+--op.right     what was on the right side of the operator
+--op.output    1 if the equation was true, 0 if the equation was false
 function simple_dialogs.split_on_operator(condstr)
 	local op={}
 	if condstr then
+		--this is just a slightly less ugly way to search for multiple patterns
 		find_operator(op,condstr,">=")
 		find_operator(op,condstr,"<=")
 		find_operator(op,condstr,"==")
@@ -606,7 +606,7 @@ function simple_dialogs.split_on_operator(condstr)
 		end --if op.pos
 		--I built a really cool table of functions, with the operator strings as the keys.  
 		--and it WAS cool, but I realized upon looking at it that it made it much more difficult 
-		--to understand what was going on.  SO, I replaced it with the chained if that is ugly,
+		--to understand what was going on.  SO, I replaced it with the chained "if" that is ugly,
 		--and inelegant, but easy to understand
 		--ifopfunc[op.operator](op)
 		if op.operator == ">=" then
@@ -641,35 +641,21 @@ return op
 end --split_on_operator
 
 
-
+--this is just a slightly less ugly way to search for multiple patterns
+--op.operator and op.pos will be updated if the passed in operator
+--is found in condition string and op.pos is not set or p is before existing op.pos
 function find_operator(op,condstr,operator)
 	local p=string.find(condstr,operator)
 	--of op was found, AND either op.pos is not set, or p is before previous op.pos
 	if p and (not op.pos or p > op.pos) then
 		op.operator=operator
 		op.pos=p
-	minetest.log("simple_dialogs->fo found operator="..operator.." op="..dump(op))
+	--minetest.log("simple_dialogs->fo found operator="..operator.." op="..dump(op))
 	end --if 
-minetest.log("simple_dialogs->fo notfound operator="..operator.." op="..dump(op))
+--minetest.log("simple_dialogs->fo notfound operator="..operator.." op="..dump(op))
 end --find operator
 
 
-
-
---from http://lua-users.org/wiki/StringRecipes
-function simple_dialogs.wrap(str, limit, indent, indent1)
-	indent = indent or ""
-	indent1 = indent1 or indent
-	limit = limit or 72
-	local here = 1-#indent1
-	local function check(sp, st, word, fi)
-		if fi - here > limit then
-			here = st - #indent
-			return "\n"..indent..word
-		end
-	end
-	return indent1..str:gsub("(%s+)()(%S+)()", check)
-end
 
 
 --this displays the help text
@@ -692,53 +678,6 @@ function simple_dialogs.dialog_help(pname)
 	end 
 end --dialog_help
 
-
-minetest.register_on_player_receive_fields(function(player, formname, fields)
-	local pname = player:get_player_name()
-	if formname ~= "simple_dialogs:dialog" then
-		--can NOT clear context here because this can be called from inside the control panel, 
-		--and that can be from a DIFFERENT mod where I cannot predict the name
-		return 
-	end
-	--minetest.log("simple_dialogs->receive_fields dialog: fields="..dump(fields))
-	if   not contextdlg[pname] 
-		or not contextdlg[pname].npcId 
-		or not contextdlg[pname].tag 
-		or not contextdlg[pname].subtag 
-		then 
-			minetest.log("simpleDialogs->recieve_fields dialog: ERROR in dialog receive_fields: context not properly set")
-			return 
-	end
-	local npcId=contextdlg[pname].npcId --get the npc id from local context
-	local npcself=nil
-	npcself=simple_dialogs.get_npcself_from_id(npcId)  --try to find the npcId in the list of luaentities
-	local tag=contextdlg[pname].tag
-	local subtag=contextdlg[pname].subtag
-	--minetest.log("simple_dialogs->receive_fields dialog: tag="..tag.." subtag="..subtag.." npcId="..npcId)
-	--minetest.log("simple_dialogs->receive_fields dialog: npcself="..dump(npcself))
-	if   not npcself
-		or not npcself.dialog
-		or not npcself.dialog.dlg[tag]
-		or not npcself.dialog.dlg[tag][subtag]
-		then 
-			minetest.log("simple_dialogs->receive_fields dialog: ERROR in dialog receive_fields: npcself.dialog.dlg[tag][subtag] not found")
-			return
-	end
-	--
-	--incoming reply fields look like: fields={ ["reply"] = CHG:1,}
-	if fields["reply"] then 
-		--minetest.log("simple_dialogs-> sss got back reply!"..dump(fields["reply"]))
-		local r=tonumber(string.sub(fields["reply"],5))
-		if npcself.dialog.dlg[tag][subtag].reply[r].target == "END" then
-			minetest.close_formspec(pname, "simple_dialogs:dialog")
-		else
-			local newtag=npcself.dialog.dlg[tag][subtag].reply[r].target
-			 simple_dialogs.show_dialog_formspec(pname,npcself,newtag)
-		end
-	end
-end) --register_on_player_receive_fields dialog
-
-
 --------------------------------------------------------------
 
 
@@ -747,13 +686,13 @@ function simple_dialogs.save_dialog_var(npcself,varname,varval)
 	if npcself and varname then
 		if not npcself.dialog.vars then npcself.dialog.vars = {} end
 		if not varval then varval="" end
-		minetest.log("simple_dialogs-> ---sdv bfr varname="..varname.." varval="..varval)
+		--minetest.log("simple_dialogs->---sdv bfr varname="..varname.." varval="..varval)
 		varname=simple_dialogs.populate_vars_and_funcs(npcself,varname)  --populate vars
 		varname=simple_dialogs.varname_filter(varname)  --filter down to only allowed chars
 		varval=simple_dialogs.populate_vars_and_funcs(npcself,varval)  --populate vars
-		minetest.log("simple_dialogs-> sdv aft varname="..varname.." varval="..varval)
+		--minetest.log("simple_dialogs->sdv aft varname="..varname.." varval="..varval)
 		npcself.dialog.vars[varname] = varval  --add to variable list
-		minetest.log("simple_dialogs-> sdv end npcself.dialog.vars="..dump(npcself.dialog.vars))
+		--minetest.log("simple_dialogs->sdv end npcself.dialog.vars="..dump(npcself.dialog.vars))
 	end
 end --save_dialog_var
 
@@ -763,10 +702,10 @@ function simple_dialogs.get_dialog_var(npcself,varname,defaultval)
 	if npcself and varname then
 		if not defaultval then defaultval="" end
 		if not npcself.dialog.vars then npcself.dialog.vars = {} end
-		minetest.log("simple_dialogs-> ---gdv bfr varname="..varname)
+		--minetest.log("simple_dialogs->---gdv bfr varname="..varname)
 		--varname=simple_dialogs.populate_vars_and_funcs(npcself,varname)  --populate vars  should already be done???
 		varname=simple_dialogs.varname_filter(varname)  --filter down to only allowed chars, no need for trim since spaces are not allowed
-		minetest.log("simple_dialogs-> ---gdv aft varname="..varname)
+		--minetest.log("simple_dialogs->---gdv aft varname="..varname)
 		if npcself.dialog.vars[varname] then return npcself.dialog.vars[varname]
 		else return defaultval
 		end
@@ -780,11 +719,7 @@ end --get_dialog_var
 
 --[[ *******************************************************************************
 Grouping
-These would probably be better separated into a different lua, perhaps even a different mod?
 --]]
-
-
-
 
 
 --this function will go through a string and build a list that tells what order
@@ -795,7 +730,7 @@ These would probably be better separated into a different lua, perhaps even a di
 --list[1].open=5 close=10
 --list[2].open=2 close=11
 --list[3].open=1 close=14
---note that if you pass this txt that has bad syntax, it will not throw an error, but instead return an empty list
+--note that if you pass this txt that has bad syntax, it will not throw an error, but instead stop processing and return the list up to that point.
 --list[].open and close are inclusive.  it includes the delimeter
 --list[].opene and closee are exclusive.  it does NOT include the delimiter
 --so in the above example:
@@ -808,7 +743,7 @@ These would probably be better separated into a different lua, perhaps even a di
 --would NOT take into account other functions or parenthesis.  example:
 --add(goodnums,calc(@[x]@+1))  <- we need add to recognize the calc function or it will get the wrong close delimiter
 function simple_dialogs.build_grouping_list(txt,opendelim,closedelim,funcname)
-	minetest.log("simple_dialogs-> bgl top, txt="..txt.." funcname="..dump(funcname))
+	--minetest.log("simple_dialogs->bgl top, txt="..txt.." funcname="..dump(funcname))
 	if funcname then funcname=simple_dialogs.trim(string.upper(funcname)) end
 	local grouping={}
 	grouping.list={}
@@ -824,25 +759,25 @@ function simple_dialogs.build_grouping_list(txt,opendelim,closedelim,funcname)
 	for i=1,string.len(txt),1 do
 		if string.sub(txt,i,i+opendelim_len-1)==opendelim then --open delim
 			openstack[#openstack+1]=i  --open pos onto stack.
-			minetest.log("simple_dialogs-> bgl i="..i.." open  openstack["..#openstack.."]="..openstack[#openstack])
+			--minetest.log("simple_dialogs->bgl i="..i.." open  openstack["..#openstack.."]="..openstack[#openstack])
 			if funcname and ((i-#funcname)>0) and (string.upper(string.sub(txt,i-#funcname,i-1))==funcname) then
 				funcstack[#openstack]=funcname --just a flag to let us know this openstack matches our function
 				openstack[#openstack]=i-#funcname
-				minetest.log("simple_dialogs-> bgl open <FUNCNAME> openstack["..#openstack.."]="..openstack[#openstack].." funcname="..funcname.." #funcname="..#funcname)
+				--minetest.log("simple_dialogs->bgl open <FUNCNAME> openstack["..#openstack.."]="..openstack[#openstack].." funcname="..funcname.." #funcname="..#funcname)
 			end
 		elseif string.sub(txt,i,i+closedelim_len-1)==closedelim then -- close delim
-			minetest.log("simple_dialogs-> bgl i="..i.." close ")
+			--minetest.log("simple_dialogs->bgl i="..i.." close ")
 			--if you find parens out of order, just stop and return what you have so far
 			if #openstack<1 then return grouping end 
-			minetest.log("simple_dialogs-> bgl close openstack="..dump(openstack).." funcstack="..dump(funcstak))
+			--minetest.log("simple_dialogs->bgl close openstack="..dump(openstack).." funcstack="..dump(funcstak))
 			if (not funcname) or (funcstack[#openstack]) then
-				minetest.log("simple_dialogs-> bgl notfuncname or is func")
+				--minetest.log("simple_dialogs->bgl notfuncname or is func")
 				local l=#grouping.list+1
 				grouping.list[l]={}
 				local gll=grouping.list[l]
 				gll.open=openstack[#openstack]
 				gll.opene=gll.open+(opendelim_len)
-				minetest.log("simple_dialogs-> bgl bfr func: gll="..dump(gll))
+				--minetest.log("simple_dialogs->bgl bfr func: gll="..dump(gll))
 				if funcname then gll.opene=gll.opene+#funcname end
 				gll.close=i+(closedelim_len-1)
 				gll.closee=i-1
@@ -850,15 +785,12 @@ function simple_dialogs.build_grouping_list(txt,opendelim,closedelim,funcname)
 				if grouping.first==0 then grouping.first=l
 				elseif gll.open<grouping.list[grouping.first].open then grouping.first=l
 				end
-				minetest.log("simple_dialogs-> bgl end close: gll="..dump(gll))
+				--minetest.log("simple_dialogs->bgl end close: gll="..dump(gll))
 			end --if not funcname
-			--gll.section=string.sub(grouping.origtxt,gll.open,gll.close)
-			--gll.sectione=string.sub(grouping.origtxt,gll.opene,gll.closee)
 			table.remove(openstack,#openstack) --remove from stack
 			table.remove(funcstack,#openstack+1) --may or may not be there, +1 because we just reduced the size of openstack by one
 		end --if
 	end --while
-	--minetest.log("GGG about to return")
 	return grouping
 end --build_grouping_list
 
@@ -866,7 +798,7 @@ end --build_grouping_list
 
 function simple_dialogs.grouping_section(grouping,i,incl_excl)
 	if not incl_excl then incl_excl="INCLUSIVE" end
-	minetest.log("GGGs top i="..i.." incl_excl="..incl_excl.." grouping="..dump(grouping))
+	--minetest.log("simple_dialogs->gs top i="..i.." incl_excl="..incl_excl.." grouping="..dump(grouping))
 	local gli=grouping.list[i]
 	--minetest.log("GGGs after gli")
 	if incl_excl=="INCLUSIVE" then
@@ -912,18 +844,7 @@ function simple_dialogs.grouping_replace(grouping,idx,replacewith,incl_excl)
 return grouping.txt
 end--grouping_replace
 
---[[
---remove all elements from a grouping that open after lastidx
---(used when if processing to be certain no parens after the then are processed)
-function simple_dialogs.grouping_clear_after(grouping,lastidx)
-	if grouping and lastidx then
-		local newgrouping={}
-		for i=#grouping.list,1,-1 do  --iterate backwards because we are removing elements
-			if grouping.list[i].open>lastidx then table.remove(grouping.list[i]) end
-		end
-	end
-end--grouping_clear_after
---]]
+
 
 --[[ ##################################################################################
 func splitter
@@ -932,14 +853,14 @@ func splitter
 
 
 function simple_dialogs.func_splitter(line,funcname,parmcount)
-	minetest.log("simple_dialogs->  ---------------funcsplitter funcname="..funcname.." line="..line)
+	--minetest.log("simple_dialogs->fs--------------- funcname="..funcname.." line="..line)
 	if not parmcount then parmcount=1 end
 	local grouping=simple_dialogs.build_grouping_list(line,"(",")",funcname)
-	minetest.log("simple_dialogs-> fs grouping="..dump(grouping))
+	--minetest.log("simple_dialogs->fs grouping="..dump(grouping))
 	for g=1,#grouping.list,1 do
 		grouping.list[g].parm={}
 		local sectione=simple_dialogs.grouping_section(grouping,g,"EXCLUSIVE") --get section from string
-		minetest.log("simple_dialogs-> fs g="..g.." sectione="..sectione)
+		--minetest.log("simple_dialogs->fs g="..g.." sectione="..sectione)
 		local c=1
 		while c<=parmcount do
 			local comma=string.find(sectione,",")
@@ -964,13 +885,16 @@ end --func_splitter
 very generic utilities
 --]]
 
+--trims leading and trailing spaces
 function simple_dialogs.trim(s)
 	return s:match "^%s*(.-)%s*$"
 end
 
 
-
-
+--this function loops through every entity in the game until it finds the one that 
+--matches the passed in id, and returns it.
+--I kept thinking there simply HAD to be a faster better way to do this,
+--but I didn't find it.
 function simple_dialogs.get_npcself_from_id(npcId)
 	if npcId==nil then return nil
 	else
@@ -981,7 +905,6 @@ function simple_dialogs.get_npcself_from_id(npcId)
 		end--for
 	end --if npcId
 end--func
-
 
 
 --this function checks to see if an entity already has an id field
@@ -1012,123 +935,11 @@ function dump(o)
 end
 
 
-
---[[ ##################################################################################
-more simple_dialog specific utilities
---]]
-
-
-
-
---tags will be upper cased, and have all characters stripped except for letters, digits, dash, and underline
-function simple_dialogs.tag_filter(tagin)
-	local allowedchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_%-" --characters allowed in dialog tags %=escape
-	return string.upper(tagin):gsub("[^" .. allowedchars .. "]", "")
-end --tag_filter
-
-
-
---variable names will be upper cased, and have all characters stripped except for letters, digits, dash, underline, and period
-function simple_dialogs.varname_filter(varnamein)
-	local allowedchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_%-%." --characters allowed in variable names %=escape
-	return string.upper(varnamein):gsub("[^" .. allowedchars .. "]", "")
-end --varname_filter
-
-
-
---ONLY mathmatical symbols allowed. 
-function simple_dialogs.calc_filter(mathstrin)
-	local allowedchars = "0123456789%.%+%-%*%/%^%(%)" --characters allowed in math	
-	return string.upper(mathstrin):gsub("[^" .. allowedchars .. "]", "")
-end --calc_filter
-
-
-
---this function populates variables within dialog text
-function simple_dialogs.populate_vars(npcself,line)
-	if npcself and npcself.dialog.vars then
-		local grouping=simple_dialogs.build_grouping_list(line,chars.varopen,chars.varclose)
-		--minetest.log("CCC vars="..dump(npcself.dialog.vars))
-		for i=1,#grouping.list,1 do
-			--local gli=grouping.list[i]
-			--minetest.log("CCC beforesectione i="..i.." grouping="..dump(grouping))
-			local k=simple_dialogs.grouping_section(grouping,i,"EXCLUSIVE") --get section from string
-			--local k=simple_dialogs.varname_filter(sectione)  --k is our key value
-			--minetest.log("CCC i="..i.." sectione="..sectione.." k="..k)
-			line=simple_dialogs.grouping_replace(grouping,i,simple_dialogs.get_dialog_var(npcself,k),"INCLUSIVE")
-		end --for
-	end --if
-	return line
-end --populate_vars
-
-
---this function executes the add(var,value) and rmv(var,value) and calc() functions
-function simple_dialogs.populate_funcs(npcself,line)
-	minetest.log("simple_dialogs-> pf top line="..line)
-	if npcself and npcself.dialog.vars and line then
-		--CALC   calc(math)
-		local grouping=simple_dialogs.func_splitter(line,"CALC",1)
-		if grouping then
-			minetest.log("simple_dialogs-> pf calc #grouping.list="..#grouping.list)
-			for g=1,#grouping.list,1 do
-				local mth=grouping.list[g].parm[1]
-				mth=simple_dialogs.calc_filter(mth)  --noting but number and mathmatical symbols allowed!
-				minetest.log("simple_dialogs-> pf calc filter mth="..mth)
-				line=simple_dialogs.sandboxed_math_loadstring(mth)
-				minetest.log("simple_dialogs-> pf calc loadstr mth="..mth)
-				line=simple_dialogs.grouping_replace(grouping,g,mth,"INCLUSIVE")
-			end --for
-		end --if grouping CALC
-		--ADD  add(variable,stringtoadd)
-		local grouping=simple_dialogs.func_splitter(line,"ADD",2)
-		if grouping then
-			minetest.log("simple_dialogs-> pf add #grouping.list="..#grouping.list)
-			for g=1,#grouping.list,1 do
-				local var=grouping.list[g].parm[1]  --populate_vars should always already have happened
-				local value=grouping.list[g].parm[2]
-				minetest.log("simple_dialogs-> pf var="..var.." value="..value)
-				--: simple_dialogs-> pf var=dd(list value=singleplayer
-				local list=simple_dialogs.get_dialog_var(npcself,var,"|")
-				if string.sub(list,-1)~="|" then list=list.."|" end --must always end in |
-				minetest.log("simple_dialogs-> dialog.vars="..dump(npcself.dialog.vars))
-				minetest.log("simple_dialogs-> bfradd list="..list) 
-				if not string.find(list,"|"..value.."|") then
-					list=list..value.."|" --safe because we guaranteed the list ends in | above
-				end
-				line=simple_dialogs.grouping_replace(grouping,g,list,"INCLUSIVE")
-				minetest.log("simple_dialogs-> aftadd list="..list) 
-			end --for
-		end --if grouping ADD
-		--RMV  rmv(variable,stringtoremove)
-		local grouping=simple_dialogs.func_splitter(line,"RMV",2)
-		if grouping then
-			for g=1,#grouping.list,1 do
-				local var=grouping.list[g].parm[1]  --populate_vars should always already have happened
-				local value=grouping.list[g].parm[2]
-				local list=simple_dialogs.get_dialog_var(npcself,var)
-				minetest.log("simple_dialogs-> pf rmv list="..list.."<")
-				list=string.gsub(list,"|"..value.."|","|")
-				line=simple_dialogs.grouping_replace(grouping,g,list,"INCLUSIVE")
-			end --for
-		end --if grouping RMV
-		--ISINLIST  isinlist(variable,stringtolookfor)  returns 1(true) or 0(false)
-		local grouping=simple_dialogs.func_splitter(line,"ISINLIST",2)
-		if grouping then
-			for g=1,#grouping.list,1 do
-				local var=grouping.list[g].parm[1]  --populate_vars should always already have happened
-				local lookfor=grouping.list[g].parm[2]
-				local list=simple_dialogs.get_dialog_var(npcself,var)
-				local rtn="0"
-				if string.find(list,"|"..lookfor.."|") then rtn="1" end  --using string, numbers cause problems sometimes
-				line=simple_dialogs.grouping_replace(grouping,g,rtn,"INCLUSIVE")
-			end --for
-		end --if grouping ISINLIST
-	end --if npcself
-	minetest.log("simple_dialogs-> pf bot line="..line)
-	return line
-end --populate_funcs
-		
-
+--This function processes a string as a mathmatical equation using loadstring
+--The string is filtered so that ONLY mathematical symbols are allowed.
+--furthermore, loadstring is run within a sandbox so that no other lua functions can be called
+--and finally the whole thing is run within a pcall so that any errors in the math can 
+--not cause a crash.
 function simple_dialogs.sandboxed_math_loadstring(mth)
 	if not mth then return "" end
 	--first we filter the string to allow NOTHING but numbers, parentheses, period, and +-*/^
@@ -1146,13 +957,126 @@ function simple_dialogs.sandboxed_math_loadstring(mth)
 	if not mth then mth=0 --this deals with if it comes back as nil
 	elseif type(mth)~="number" then mth=0  --and this deals with if comes back as a string
 	end --if not mth
-
 	--minetest.log("simple_dialogs->sml after error mth="..dump(mth))
 	return mth
 end --sandboxed_math_loadstring
 
 
+--[[ ##################################################################################
+more simple_dialog specific utilities
+--]]
 
+
+--tags will be upper cased, and have all characters stripped except for letters, digits, dash, and underline
+function simple_dialogs.tag_filter(tagin)
+	local allowedchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_%-" --characters allowed in dialog tags %=escape
+	return string.upper(tagin):gsub("[^" .. allowedchars .. "]", "")
+end --tag_filter
+
+
+--variable names will be upper cased, and have all characters stripped except for letters, digits, dash, underline, and period
+function simple_dialogs.varname_filter(varnamein)
+	local allowedchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_%-%." --characters allowed in variable names %=escape
+	return string.upper(varnamein):gsub("[^" .. allowedchars .. "]", "")
+end --varname_filter
+
+
+--ONLY mathmatical symbols allowed. 
+function simple_dialogs.calc_filter(mathstrin)
+	local allowedchars = "0123456789%.%+%-%*%/%^%(%)" --characters allowed in math	
+	return string.upper(mathstrin):gsub("[^" .. allowedchars .. "]", "")
+end --calc_filter
+
+
+--this function populates variables
+--do not call this directly, use populate_vars_and_funcs instead
+function simple_dialogs.populate_vars(npcself,line)
+	if npcself and npcself.dialog.vars then
+		local grouping=simple_dialogs.build_grouping_list(line,chars.varopen,chars.varclose)
+		--minetest.log("CCC vars="..dump(npcself.dialog.vars))
+		for i=1,#grouping.list,1 do
+			--local gli=grouping.list[i]
+			--minetest.log("CCC beforesectione i="..i.." grouping="..dump(grouping))
+			local k=simple_dialogs.grouping_section(grouping,i,"EXCLUSIVE") --get section from string
+			--local k=simple_dialogs.varname_filter(sectione)  --k is our key value
+			--minetest.log("CCC i="..i.." sectione="..sectione.." k="..k)
+			line=simple_dialogs.grouping_replace(grouping,i,simple_dialogs.get_dialog_var(npcself,k),"INCLUSIVE")
+		end --for
+	end --if
+	return line
+end --populate_vars
+
+
+--this function executes the add(var,value) and rmv(var,value) and IsInList() and calc() functions
+--do not call this directly, use populate_vars_and_funcs instead
+function simple_dialogs.populate_funcs(npcself,line)
+	--minetest.log("simple_dialogs->pf top line="..line)
+	if npcself and npcself.dialog.vars and line then
+		--CALC   calc(math)
+		local grouping=simple_dialogs.func_splitter(line,"CALC",1)
+		if grouping then
+			--minetest.log("simple_dialogs->pf calc #grouping.list="..#grouping.list)
+			for g=1,#grouping.list,1 do
+				local mth=grouping.list[g].parm[1]
+				mth=simple_dialogs.calc_filter(mth)  --noting but number and mathmatical symbols allowed!
+				--minetest.log("simple_dialogs->pf calc filter mth="..mth)
+				line=simple_dialogs.sandboxed_math_loadstring(mth)
+				--minetest.log("simple_dialogs->pf calc loadstr mth="..mth)
+				line=simple_dialogs.grouping_replace(grouping,g,mth,"INCLUSIVE")
+			end --for
+		end --if grouping CALC
+		--ADD  add(variable,stringtoadd)
+		local grouping=simple_dialogs.func_splitter(line,"ADD",2)
+		if grouping then
+			--minetest.log("simple_dialogs->pf add #grouping.list="..#grouping.list)
+			for g=1,#grouping.list,1 do
+				local var=grouping.list[g].parm[1]  --populate_vars should always already have happened
+				local value=grouping.list[g].parm[2]
+				--minetest.log("simple_dialogs->pf var="..var.." value="..value)
+				--: simple_dialogs->pf var=dd(list value=singleplayer
+				local list=simple_dialogs.get_dialog_var(npcself,var,"|")
+				if string.sub(list,-1)~="|" then list=list.."|" end --must always end in |
+				--minetest.log("simple_dialogs->dialog.vars="..dump(npcself.dialog.vars))
+				--minetest.log("simple_dialogs->bfradd list="..list) 
+				if not string.find(list,"|"..value.."|") then
+					list=list..value.."|" --safe because we guaranteed the list ends in | above
+				end
+				line=simple_dialogs.grouping_replace(grouping,g,list,"INCLUSIVE")
+				--minetest.log("simple_dialogs->aftadd list="..list) 
+			end --for
+		end --if grouping ADD
+		--RMV  rmv(variable,stringtoremove)
+		local grouping=simple_dialogs.func_splitter(line,"RMV",2)
+		if grouping then
+			for g=1,#grouping.list,1 do
+				local var=grouping.list[g].parm[1]  --populate_vars should always already have happened
+				local value=grouping.list[g].parm[2]
+				local list=simple_dialogs.get_dialog_var(npcself,var)
+				--minetest.log("simple_dialogs->pf rmv list="..list.."<")
+				list=string.gsub(list,"|"..value.."|","|")
+				line=simple_dialogs.grouping_replace(grouping,g,list,"INCLUSIVE")
+			end --for
+		end --if grouping RMV
+		--ISINLIST  isinlist(variable,stringtolookfor)  returns 1(true) or 0(false)
+		local grouping=simple_dialogs.func_splitter(line,"ISINLIST",2)
+		if grouping then
+			for g=1,#grouping.list,1 do
+				local var=grouping.list[g].parm[1]  --populate_vars should always already have happened
+				local lookfor=grouping.list[g].parm[2]
+				local list=simple_dialogs.get_dialog_var(npcself,var)
+				local rtn="0"
+				if string.find(list,"|"..lookfor.."|") then rtn="1" end  --using string, numbers cause problems sometimes
+				line=simple_dialogs.grouping_replace(grouping,g,rtn,"INCLUSIVE")
+			end --for
+		end --if grouping ISINLIST
+	end --if npcself
+	--minetest.log("simple_dialogs->pf bot line="..line)
+	return line
+end --populate_funcs
+
+
+--this function combines populate_vars and populate_funcs
+--the others should never be called directly, use this one.
 function simple_dialogs.populate_vars_and_funcs(npcself,line)
 	if npcself and line then
 		line=simple_dialogs.populate_vars(npcself,line)
@@ -1175,6 +1099,7 @@ minetest.register_on_leaveplayer(function(player)
 end)--register_on_leaveplayer
 
 
+--this handles returned fields for the dialog control formspec
 --this will only work if you use show_dialog_control_formspec.  If you have integrated the dialog controls 
 --into another formspec you will have to call process_simple_dialog_control_fields from your own player receive fields function
 minetest.register_on_player_receive_fields(function(player, formname, fields)
@@ -1193,6 +1118,53 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		simple_dialogs.process_simple_dialog_control_fields(pname,npcself,fields)
 	end --if npcself not nil
 end) --register_on_player_receive_fields dialog_controls
+
+
+--this handles returned fields for the regular dialog formspec
+minetest.register_on_player_receive_fields(function(player, formname, fields)
+	local pname = player:get_player_name()
+	if formname ~= "simple_dialogs:dialog" then
+		--can NOT clear context here because this can be called from inside the control panel, 
+		--and that can be from a DIFFERENT mod where I cannot predict the name
+		return 
+	end
+	--minetest.log("simple_dialogs->receive_fields dialog: fields="..dump(fields))
+	if   not contextdlg[pname] 
+		or not contextdlg[pname].npcId 
+		or not contextdlg[pname].tag 
+		or not contextdlg[pname].subtag 
+		then 
+			minetest.log("simpleDialogs->recieve_fields dialog: ERROR in dialog receive_fields: context not properly set")
+			return 
+	end
+	local npcId=contextdlg[pname].npcId --get the npc id from local context
+	local npcself=nil
+	npcself=simple_dialogs.get_npcself_from_id(npcId)  --try to find the npcId in the list of luaentities
+	local tag=contextdlg[pname].tag
+	local subtag=contextdlg[pname].subtag
+	--minetest.log("simple_dialogs->receive_fields dialog: tag="..tag.." subtag="..subtag.." npcId="..npcId)
+	--minetest.log("simple_dialogs->receive_fields dialog: npcself="..dump(npcself))
+	if   not npcself
+		or not npcself.dialog
+		or not npcself.dialog.dlg[tag]
+		or not npcself.dialog.dlg[tag][subtag]
+		then 
+			minetest.log("simple_dialogs->receive_fields dialog: ERROR in dialog receive_fields: npcself.dialog.dlg[tag][subtag] not found")
+			return
+	end
+	--
+	--incoming reply fields look like: fields={ ["reply"] = CHG:1,}
+	if fields["reply"] then 
+		--minetest.log("simple_dialogs->sss got back reply!"..dump(fields["reply"]))
+		local r=tonumber(string.sub(fields["reply"],5))
+		if npcself.dialog.dlg[tag][subtag].reply[r].target == "END" then
+			minetest.close_formspec(pname, "simple_dialogs:dialog")
+		else
+			local newtag=npcself.dialog.dlg[tag][subtag].reply[r].target
+			 simple_dialogs.show_dialog_formspec(pname,npcself,newtag)
+		end
+	end
+end) --register_on_player_receive_fields dialog
 
 
 
