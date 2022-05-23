@@ -34,7 +34,7 @@ friendlist2=@[friendlist2]@
 
 the variable angry was set in a different tag, but can still be displayed here because variables live for as long as the npc lives.
 Am I angry? @[angry]@
-:set location=mountains
+:set location=mountaains
 :set FriendList=add(FriendList,@[playername]@)
 :set FriendList2=rmv(FriendList,batman)
 >start:Back to the start
@@ -42,10 +42,14 @@ Am I angry? @[angry]@
 >iftest:using :If to set things conditionaly based on variables values
 
 ===iftest
-The last line of this dialog will change based on the value of angry
-Am I angry right now? @[angry]@
+This dialog illustrates using the command :if
+
+am I angry right now? @[angry]@
+The below "mood" line is based on the status of angry
 @[mood]@
+
 My friendlist is @[friendlist]@
+The below line changes based on both angry AND whether the player is in friendlist
 And what do I think about you? @[friendstatus]@
 :set mood=I guess I'm just in a good mood
 :if (@[angry]@==Y) then set mood=I'm in a lousy mood today

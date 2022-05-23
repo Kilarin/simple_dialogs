@@ -163,7 +163,7 @@ function simple_dialogs.show_dialog_formspec(pname,npcself,tag)
 		"no_prepend[]",        --must be present for below transparent setting to work
 		"bgcolor[;neither;]",  --make the formspec background transparent
 		"box[0.370,0.4;9.6,8.4;#222222FF]", --draws a box background behind our text area
-		simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
+		simple_dialogs.dialog_to_formspec(pname,npcself,tag)
 	}
 	formspec=table.concat(formspec,"")
 	minetest.show_formspec(pname,"simple_dialogs:dialog",formspec)
@@ -283,6 +283,7 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)  --TODO
 		end --for st
 	end --for t
 	npcself.dialog.text=dialogstr
+	minetest.log("simple_dialogs-> ldfs end dlg="..dump(wk.dlg))
 end --load_dialog_from_string
 
 
@@ -299,15 +300,17 @@ function simple_dialogs.load_dialog_tag(wk)
 	local k, l = string.find(wk.line,"%)") --look for close parenthesis
 	--if ( and ) both exist, and the ) is after the (
 	if i and i>0 and k and k>i then --found weight
-		tag=string.sub(wk.line,1,i-1) --cut the (weight) out of the tagname
+		wk.tag=string.sub(wk.line,1,i-1) --cut the (weight) out of the tagname
 		local w=string.sub(wk.line,i+1,k-1) --get the number in parenthesis (weight)
 		weight=tonumber(w)
 		if weight==nil or weight<1 then weight=1 end
+		minetest.log("simple_dialogs->ldt line="..wk.line.." tag="..wk.tag.." i="..i.." k="..k.." w="..w)
 	end
 	--strip tag down to only allowed characters
 	wk.tag=simple_dialogs.tag_filter(wk.tag) --this also strips all leading = signs
 	wk.subtag=1
-	if wk.dlg[tag] then --existing tag
+	if wk.dlg[wk.tag] then --existing tag
+		--minetest.log("simple_dialogs->ldt tag="..wk.tag.." subtag="..wk.subtag)
 		wk.subtag=#(wk.dlg[wk.tag])+1
 		wk.weight=wk.dlg[wk.tag][wk.subtag-1].weight+wk.weight  --add previous weight to current weight
 		--weight is always the maximum number rolled that returns this subtag
@@ -413,16 +416,29 @@ end --load_dialog_cmnd_if
 convert Dialog table into a formspec
 --]]
 
+--[[
+this is the other side of load_dialog_from_string.  dialog_to_formspec turns a dialog table into 
+a formspec with the say text and reply list.
+this is when variables are substituted, functions executed, and commands run.
 
---this is the other side of load_dialog_from_string.  get_dialog_text_and_replies turns a dialog table into 
---a formspec with the say text and reply list.
---this is when variables are substituted, functions executed, and commands run.
-function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
+a quick note on weight.  the weight number for each subtag is the maximum weight for that tag.
+So, for example, if you have three treasure tags like this
+=Treasure(2)
+=Treasure(4)
+=Treasure(7)
+you will get weights like this:
+dlg[Treasure][1].weight=2
+dlg[Treasure][2].weight=6    (2+4=6)
+dlg[Treasure][3].weight=13   (6+7=13)
+this means we can just roll a random number between 1 and 13,
+then select the first subtag for which our random number is less than or equal to its weight.
+--]]
+function simple_dialogs.dialog_to_formspec(pname,npcself,tag)
 	--minetest.log("simple_dialogs->gdtar: pname="..pname.." tag="..tag)
 	--minetest.log("simple_dialogs->gdtar: npcself="..dump(npcself))
 	--first we make certain everything is properly defined.  if there is an error we do NOT want to crash
 	--but we do return an error message that might help debug.
-	local errlabel="label[0.375,0.5; ERROR in get_dialog_text_and_replies, "
+	local errlabel="label[0.375,0.5; ERROR in dialog_to_formspec, "
 	if not npcself then return errlabel.." npcself not found]" 
 	elseif not npcself.dialog then return errlabel.." npcself.dialog not found]" 
 	elseif not tag or tag==nil then return errlabel.." tag passed was nil]"
@@ -440,19 +456,18 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	end
 
 	local formspec={}
-	--how many matching tags are there  (for example, if there are 3 "TREASURE" tags)
-	local tagmax=#dlg[tag]
-	--get a random number between 1 and the max weight
-	local rnd=math.random(dlg[tag][tagmax].weight)
 	
-	--TODO: subtag is better than tagcount (which looks like a max) but still not a wonderful
-	--variable name.  what would be better?  rndtag?  nah, tagchoice?  no.  
-	--this represents which tag was chosen when you had repeated tags
+	--how many matching tags (subtags) are there  (for example, if there are 3 "TREASURE" tags)
+	local subtagmax=#dlg[tag]
+	--get a random number between 1 and the max weight
+	local rnd=math.random(dlg[tag][subtagmax].weight)
+	
+	--subtag represents which tag was chosen when you had repeated tags
 	local subtag=1
 	--we loop through all the matching tags and select the first one for which our random number
 	--is less than or equal to that tags weight.
-	for t=1,tagmax,1 do
-		--minetest.log("simple_dialogs->gdtar: t="..t.." rnd="..rnd.." tag="..tag.." tagmax="..tagmax.." weight="..dlg[tag][t].weight)
+	for t=1,subtagmax,1 do
+		--minetest.log("simple_dialogs->gdtar: t="..t.." rnd="..rnd.." tag="..tag.." subtagmax="..subtagmax.." weight="..dlg[tag][t].weight)
 		if rnd<=dlg[tag][t].weight then 
 			subtag=t
 			break 
@@ -558,7 +573,7 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	contextdlg[pname].tag=tag
 	contextdlg[pname].subtag=subtag
 	return table.concat(formspec,"")
-end --get_dialog_text_and_replies
+end --dialog_to_formspec
 
 
 --[[
