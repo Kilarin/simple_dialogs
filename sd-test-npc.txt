@@ -157,10 +157,12 @@ All of this should be ignored and none of it should cause a crash
 :set var7=@[doesnotexist]@
 :set var8=calc(isinlist()
 :if
-:if @[var5]@>=x then
-:if @[var5]@<=x
-:if @[var5]@>x then badcommand
-:if @[doesnotexist]@==flaming@[doesnotexist]@@[var2]@@[var5]@ calc(3/0)
+:if (@[var5]@>=x) then set
+:if (@[var5]@<=x)
+:if (@[var5]@>x) then badcommand
+:if (@[doesnotexist]@==flaming@[doesnotexist]@@[var2]@@[var5]@ calc(3/0)) then
+:if () then set x=3
+:if then
 >tagwithnoreplies:test if a tag with no replies will crash
 >tagwithnodialog:test if a tag with no dialog will crash
 >doesnotexist:test if a reply target pointing at a tag that does not exist will crash.

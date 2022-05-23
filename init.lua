@@ -228,7 +228,7 @@ dlg[tag][subtag].cmnd[cmndcount].condstr   (the condition string, a==b etc, must
 dlg[tag][subtag].cmnd[cmndcount].ifcmnd.cmnd  (SET for now, GOTO later?, entire structure of subcommand will be here)
 
 --]]
-function simple_dialogs.load_dialog_from_string(npcself,dialogstr)  
+function simple_dialogs.load_dialog_from_string(npcself,dialogstr)
 	npcself.dialog = {}
 	npcself.dialog.dlg={}
 	npcself.dialog.vars = {}
@@ -449,8 +449,7 @@ function simple_dialogs.dialog_to_formspec(pname,npcself,tag)
 	elseif not tag or tag==nil then return errlabel.." tag passed was nil]"
 	elseif not npcself.dialog.dlg[tag] then return errlabel.. " tag "..tag.." not found in the dialog]"
 	end
-	--TODO: non-owned npcs without a dialog should not show any dialog formspec at all
-	--or at least should show something better than an error
+
 	local dlg=npcself.dialog.dlg  --shortcut to make things more readable
 	
 	--add playername to variables IF it was passed in
@@ -472,10 +471,10 @@ function simple_dialogs.dialog_to_formspec(pname,npcself,tag)
 	local subtag=1
 	--we loop through all the matching tags and select the first one for which our random number
 	--is less than or equal to that tags weight.
-	for t=1,subtagmax,1 do
+	for st=1,subtagmax,1 do
 		--minetest.log("simple_dialogs->gdtar: t="..t.." rnd="..rnd.." tag="..tag.." subtagmax="..subtagmax.." weight="..dlg[tag][t].weight)
-		if rnd<=dlg[tag][t].weight then 
-			subtag=t
+		if rnd<=dlg[tag][st].weight then 
+			subtag=st
 			break 
 		end
 	end
@@ -484,72 +483,20 @@ function simple_dialogs.dialog_to_formspec(pname,npcself,tag)
 	--minetest.log("simple_dialogs->gdtar: before formspec npcself.dialog="..dump(npcself.dialog))
 	
 	--very first, run any commands
-	minetest.log("simple_dialogs->gdtar: tag="..tag.." subtag="..subtag)
-	minetest.log("simple_dialogs->gdtar: dlg["..tag.."]["..subtag.."]="..dump(dlg[tag][subtag]))
+	--minetest.log("simple_dialogs->gdtar: tag="..tag.." subtag="..subtag)
+	--minetest.log("simple_dialogs->gdtar: dlg["..tag.."]["..subtag.."]="..dump(dlg[tag][subtag]))
 	for c=1,#dlg[tag][subtag].cmnd do
 		local cmnd=dlg[tag][subtag].cmnd[c]
 		minetest.log("simple_dialogs->gdtar: c="..c.." cmnd="..dump(cmnd))
 		--local cmndname=dlg[tag][subtag].cmnd[c].cmnd
 		if cmnd.cmnd=="SET" then
-			--local varname=dlg[tag][subtag].cmnd[c].varname
-			--local varval=dlg[tag][subtag].cmnd[c].varval
-			--minetest.log("simple_dialogs-> ===***=== varname="..varname.." varval="..varval)
-			--simple_dialogs.save_dialog_var(npcself,varname,varval)  --load the variable (varname filtering and populating vars happens inside this method)
-			simple_dialogs.cmnd_set(npcself,cmnd)
+			simple_dialogs.execute_cmnd_set(npcself,cmnd)
 		elseif cmnd.cmnd=="IF" then
-			minetest.log("simple_dialogs->gdtar if cmnd="..dump(cmnd))
-			local condstr=simple_dialogs.populate_vars_and_funcs(npcself,cmnd.condstr)
-			minetest.log("simple_dialogs->gdtar if condstr="..condstr)
-			local ifgrouping=simple_dialogs.build_grouping_list(condstr,"(",")")
-			for i=1,#ifgrouping.list,1 do
-				local condsection=simple_dialogs.grouping_section(ifgrouping,i,"EXCLUSIVE")
-				minetest.log("simple dialogs->gdtar if i="..i.." ifgrouping="..dump(ifgrouping))
-				minetest.log("simple_dialogs->gdtar if condsection="..dump(condsection).." constr="..condstr) 
-
-				local op=simple_dialogs.split_on_operator(condsection)
-				minetest.log("simple_dialog->gdtar if op="..dump(op))
-				if op then
-					local output=""
-					if op.operator == ">=" then
-						if op.left >= op.right then output="1" else output="0" end
-					elseif op.operator == "<=" then
-						if op.left <= op.right then output="1" else output="0" end
-					elseif op.operator == "==" then
-						if op.left == op.right then output="1" else output="0" end
-					elseif op.operator == "~=" then
-						if op.left ~= op.right then output="1" else output="0" end
-					elseif op.operator == ">" then
-						if op.left > op.right then output="1" else output="0" end
-					elseif op.operator == "<" then
-						if op.left < op.right then output="1" else output="0" end
-					end --if op.operator
-					minetest.log("simple_dialogs->gdtar if output="..output.."<")
-					if op and op.operator>"" then --we found an operator
-						condstr=simple_dialogs.grouping_replace(ifgrouping,i,output,"EXCLUSIVE")
-						minetest.log("simple_dialogs->gdtar if left="..op.left.."| operator="..op.operator.." right="..op.right.."| output="..output.." condstr="..condstr)
-					else
-						--if no operator found, its HOPEFULLY just and and ors we do nothing.
-						minetest.log("simple_dialogs->gdtar if no operator found condstr="..condstr)
-					end --if output
-				end --if op 
-			end --for
-			minetest.log("simple_dialogs->gdtar if before calc cond="..condstr)
-			--TODO: test multiple parens, change AND to * and OR to +
-			condstr=string.gsub(string.upper(condstr),"AND","*")
-			condstr=string.gsub(string.upper(condstr),"OR","+")
-			minetest.log("simple_dialogs->gdtar if and or subst cond="..condstr)
-			local ifrslt=simple_dialogs.sandboxed_math_loadstring(condstr)
-			minetest.log("simple_dialogs->gdtar if after calc ifrslt="..ifrslt)
-			--now if rslt=0 test failed.  if rslt>0 test succeded
-			if ifrslt>0 then
-				if cmnd.ifcmnd.cmnd=="SET" then
-					minetest.log("simple_dialogs->gdtar if executing set")
-					simple_dialogs.cmnd_set(npcself,cmnd.ifcmnd)
-				end --ifcmnd SET
-			end --ifrst
+			simple_dialogs.execute_cmnd_if(npcself,cmnd)
 		end --if cmnd
 	end --for c
 	
+	--populate the say portion of the dialog, that is simple.
 	local say=dlg[tag][subtag].say
 	say=simple_dialogs.populate_vars_and_funcs(npcself,say)
 	if not say then say="" end
@@ -560,17 +507,14 @@ function simple_dialogs.dialog_to_formspec(pname,npcself,tag)
 		if r>1 then replies=replies.."," end
 		local rply=dlg[tag][subtag].reply[r].text
 		rply=simple_dialogs.populate_vars_and_funcs(npcself,rply)
-		--if string.len(rply)>70 then rply=string.sub(rply,1,70)..string.char(10)..string.sub(rply,71) end
-		--TODO: this is a problem, wrapping once works, but is crowded.  wrapping 3 or more times overlaps text.
-		--TODO: also, how to determine what the REAL wrap length should be based on player screen width?
-		--replies=replies..minetest.formspec_escape(simple_dialogs.wrap(rply,166,"     ",""))
+		--if string.len(rply)>70 then rply=string.sub(rply,1,70)..string.char(10)..string.sub(rply,71) end  tried wrapping, it doesn't work well.
 		replies=replies..minetest.formspec_escape(rply)
 	end --for
+	
 	local x=0.45
 	local y=0.5
 	local x2=0.375
 	local y2=y+8.375
-	--TODO: this crashes if there are no replies.  either escape this or default an "end" reply
 	formspec={
 		"textarea["..x..","..y..";9.4,8;;;"..minetest.formspec_escape(say).."]",
 		"textlist["..x2..","..y2..";27,5;reply;"..replies.."]"  --note that replies were escaped as they were added
@@ -582,35 +526,120 @@ function simple_dialogs.dialog_to_formspec(pname,npcself,tag)
 end --dialog_to_formspec
 
 
+
+--this executes a :set command, run during dialog_to_formspec
+--pass dlg[tag][subtag].cmnd[c] 
+--cmnd.cmnd="SET"
+--cmnd.varname
+--cmnd.varval
+function simple_dialogs.execute_cmnd_set(npcself,cmnd)
+	minetest.log("simple_dialogs-> cs bfr cmnd="..dump(cmnd))
+	simple_dialogs.save_dialog_var(npcself,cmnd.varname,cmnd.varval)  --load the variable (varname filtering and populating vars happens inside this method)
+	minetest.log("simple_dialogs-> cs aft cmnd="..dump(cmnd))
+end--cmnd_set
+
+
+
+--this executes an :if command, run during dialog_to_formspec
+--pass dlg[tag][subtag].cmnd[c] 
+--cmnd.cmnd="IF"
+--cmnd.condstr  This will be the condition, example: ( ( (hitpoints<10) and (name=="badguy") ) or (status=="asleep") )
+function simple_dialogs.execute_cmnd_if(npcself,cmnd)
+	--minetest.log("simple_dialogs->eci cmnd="..dump(cmnd))
+	--first thing, populate any vars and run any functions in the condition string
+	local condstr=simple_dialogs.populate_vars_and_funcs(npcself,cmnd.condstr)
+	--minetest.log("simple_dialogs->eci condstr="..condstr)
+	local ifgrouping=simple_dialogs.build_grouping_list(condstr,"(",")")
+	for i=1,#ifgrouping.list,1 do
+		local condsection=simple_dialogs.grouping_section(ifgrouping,i,"EXCLUSIVE")  --one paren bounded section of condstr
+		local op=simple_dialogs.split_on_operator(condsection)  --gives op.left, op.operator, op.right. op.output
+		--split_on_operator ALWAYS returns an op table, no matter what the input, so no need to check if op exists
+		--minetest.log("simple_dialog->eci if op="..dump(op))
+		condstr=simple_dialogs.grouping_replace(ifgrouping,i,op.output,"EXCLUSIVE")
+		--minetest.log("simple_dialogs->ecir if left="..op.left.."| operator="..op.operator.." right="..op.right.."| output="..op.output.." condstr="..condstr)
+	end --for
+	--minetest.log("simple_dialogs->gdtar if before calc cond="..condstr)
+	--at this point we should be down to nothing but zeros and ones, and AND and ORs
+	--replace AND with * and OR with + and we have a mathematical equation that will resolve the boolean logic.
+	condstr=string.gsub(string.upper(condstr),"AND","*")
+	condstr=string.gsub(string.upper(condstr),"OR","+")
+	minetest.log("simple_dialogs->eci if and or subst cond="..condstr)
+	--run the string through our sandboxed and filtered math function
+	local ifrslt=simple_dialogs.sandboxed_math_loadstring(condstr)
+	minetest.log("simple_dialogs->eci if after calc ifrslt="..ifrslt)
+	--now if ifrslt=0 test failed.  if ifrslt>0 test succeded
+	if ifrslt>0 then
+		if cmnd.ifcmnd.cmnd=="SET" then
+			--minetest.log("simple_dialogs->eci if executing set")
+			simple_dialogs.execute_cmnd_set(npcself,cmnd.ifcmnd)
+		end --ifcmnd SET
+	end --ifrst
+end --cmnd_if
+
+
+
+
+
+
 --[[
 
 --]]
 
 function simple_dialogs.split_on_operator(condstr)
+	local op={}
 	if condstr then
-		local op={}
 		find_operator(op,condstr,">=")
 		find_operator(op,condstr,"<=")
 		find_operator(op,condstr,"==")
 		find_operator(op,condstr,"~=")
 		find_operator(op,condstr,">")
 		find_operator(op,condstr,"<")
-		
-		minetest.log("simple_dialogs->soo op="..dump(op))
-		
+		--minetest.log("simple_dialogs->soo op="..dump(op))
 		if op.pos then
 			op.left=string.sub(condstr,1,op.pos-1)
 			op.right=string.sub(condstr,op.pos+#op.operator)
 		else --no operator
 			op.left=condstr
-			op.operator=""
+			op.operator="nop"
 			op.right=""
 			op.pos=#condstr+1  --shouldnt matter
 		end --if op.pos
-		return op
-	else return nil
-	end --if opstr
+		--I built a really cool table of functions, with the operator strings as the keys.  
+		--and it WAS cool, but I realized upon looking at it that it made it much more difficult 
+		--to understand what was going on.  SO, I replaced it with the chained if that is ugly,
+		--and inelegant, but easy to understand
+		--ifopfunc[op.operator](op)
+		if op.operator == ">=" then
+			if op.left >= op.right then op.output="1" else op.output="0" end
+		elseif op.operator == "<=" then
+			if op.left <= op.right then op.output="1" else op.output="0" end
+		elseif op.operator == "==" then
+			if op.left == op.right then op.output="1" else op.output="0" end
+		elseif op.operator == "~=" then
+			if op.left ~= op.right then op.output="1" else op.output="0" end
+		elseif op.operator == ">" then
+			if op.left > op.right then op.output="1" else op.output="0" end
+		elseif op.operator == "<" then
+			if op.left < op.right then op.output="1" else op.output="0" end
+		else
+			op.operator="nop"
+			op.left=condstr
+			op.right=""       --shouldn't matter
+			op.pos=#condstr+1 --shouldn't matter
+			op.output=condstr 
+			--if you didnt provide an operator, then the output is just whatever was there
+			--and it had better well resolve to a 0 or when when run through sandboxed_math
+		end --if op.operator
+	else --if condstr was nil (just in case)
+		op.operator="nop"
+		op.left=""
+		op.right=""
+		op.pos=1
+		op.output=""
+	end --if condstr
+return op
 end --split_on_operator
+
 
 
 function find_operator(op,condstr,operator)
@@ -625,12 +654,6 @@ minetest.log("simple_dialogs->fo notfound operator="..operator.." op="..dump(op)
 end --find operator
 
 
---pass dlg[tag][subtag].cmnd[c] which should contain .varname and .varval
-function simple_dialogs.cmnd_set(npcself,cmnd)
-	minetest.log("simple_dialogs-> cs bfr cmnd="..dump(cmnd))
-	simple_dialogs.save_dialog_var(npcself,cmnd.varname,cmnd.varval)  --load the variable (varname filtering and populating vars happens inside this method)
-	minetest.log("simple_dialogs-> cs aft cmnd="..dump(cmnd))
-end--cmnd_set
 
 
 --from http://lua-users.org/wiki/StringRecipes
@@ -1071,8 +1094,8 @@ function simple_dialogs.populate_funcs(npcself,line)
 				minetest.log("simple_dialogs-> bfradd list="..list) 
 				if not string.find(list,"|"..value.."|") then
 					list=list..value.."|" --safe because we guaranteed the list ends in | above
-					line=simple_dialogs.grouping_replace(grouping,g,list,"INCLUSIVE")
 				end
+				line=simple_dialogs.grouping_replace(grouping,g,list,"INCLUSIVE")
 				minetest.log("simple_dialogs-> aftadd list="..list) 
 			end --for
 		end --if grouping ADD
@@ -1116,8 +1139,15 @@ function simple_dialogs.sandboxed_math_loadstring(mth)
 	local env = {loadstring=loadstring} --only loadstring can run
 	local f=function() return loadstring("return "..mth.."+0")() end
 	setfenv(f,env) --allow function f to only run in sandbox env
+	--minetest.log("simple_dialogs->sml before mth="..mth)
 	pcall(function() mth=f() end) --pcall ensures this can NOT cause an error
-	if not mth then mth="error" end
+	--minetest.log("simple_dialogs->sml after mth="..dump(mth))
+	--we should ALWAYS return a number to prevent possible errors
+	if not mth then mth=0 --this deals with if it comes back as nil
+	elseif type(mth)~="number" then mth=0  --and this deals with if comes back as a string
+	end --if not mth
+
+	--minetest.log("simple_dialogs->sml after error mth="..dump(mth))
 	return mth
 end --sandboxed_math_loadstring
 
