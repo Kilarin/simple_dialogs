@@ -1,6 +1,6 @@
 simple_dialogs = { }
 
---local S = mobs.intllib_npc  TODO integrate with intllib
+local S = simple_dialogs.intllib  --TODO integrate with intllib
 
 -- simple dialogs by Kilarin
 
@@ -18,92 +18,114 @@ local transparentpng=minetest.get_modpath("simple_dialogs").."/transparent.png"
 
 local registered_varloaders={}
 
---[[
-local tag_filter=simple_dialogs.tag_filter
-local wrap=simple_dialogs.wrap
-local get_npcself_from_id=simple_dialogs.get_npcself_from_id
-local set_npc_id=simple_dialogs.set_npc_id
-]]--
-
---when the player exits, wipe out their context entries
-minetest.register_on_leaveplayer(function(player)
-	local name = player:get_player_name()
-	contextctr[name] = nil
-	contextdlg[name] = nil 
-end)--register_on_leaveplayer
 
 
 
---this creates and displays an independant dialog control formspec
+--[[ ##################################################################################
+Translations
+--]]
+
+-- Check for translation method
+local S
+if minetest.get_translator ~= nil then
+	S = minetest.get_translator("simple_dialogs") -- 5.x translation function
+else
+	if minetest.get_modpath("intllib") then
+		dofile(minetest.get_modpath("intllib") .. "/init.lua")
+		if intllib.make_gettext_pair then
+			gettext, ngettext = intllib.make_gettext_pair() -- new gettext method
+		else
+			gettext = intllib.Getter() -- old text file method
+		end
+		S = gettext
+	else -- boilerplate function
+		S = function(str, ...)
+			local args = {...}
+			return str:gsub("@%d+", function(match)
+				return args[tonumber(match:sub(2))]
+			end)
+		end
+	end
+end
+
+simple_dialogs.intllib = S
+
+
+--[[ *******************************************************************************
+Methods used when integrating simple_dialogs with an entity mod
+--]]
+
+--this should be used by your entity mod to load variable that you want to be available for dialogs
+--example:
+--		simple_dialogs.register_varloader(function(npcself,playername)
+--		simple_dialogs.load_dialog_var(npcself,"NPCNAME",npcself.nametag)
+--		simple_dialogs.load_dialog_var(npcself,"STATE",npcself.state)
+--		simple_dialogs.load_dialog_var(npcself,"FOOD",npcself.food)
+--		simple_dialogs.load_dialog_var(npcself,"HEALTH",npcself.food)
+--		simple_dialogs.load_dialog_var(npcself,"owner",npcself.owner)
+--	end)--register_on_leaveplayer
+function simple_dialogs.register_varloader(func)
+	registered_varloaders[#registered_varloaders+1]=func
+	minetest.log("simple_dialogs-> register_varloader "..#registered_varloaders)
+end
+
+
+--the dialog control formspec is where an owner can create a dialog for an npc
+
+
+--this creates and displays an independent dialog control formspec
 --dont use this if you are trying to integrate dialog controls with another formspec
 function simple_dialogs.show_dialog_controls_formspec(pname,npcself)
-	minetest.show_formspec(pname, "simple_dialogs:dialog_controls", get_dialog_controls_formspec(pname,npcself) )
-end --show_dialog_controls_formspec
-
-
---this gets an independant dialog control formspec
-function simple_dialogs.get_dialog_controls_formspec(pname,npcself)
 	contextctr[pname]=simple_dialogs.set_npc_id(npcself) --store the npc id in local context so we can use it when the form is returned.  (cant store self)
-	-- Make npc controls formspec 
+	-- Make blank formspec
 	local formspec = {
 		"formspec_version[4]",
 		"size[15,7]", 
 		}
+	--add the dialog controls to the above blank formspec
 	simple_dialogs.add_dialog_control_to_formspec(pname,npcself,formspec,0.375,0.375)
-	--minetest.log("simple_dialogs->getdialogcontrols: formspec after="..dump(formspec))
-	table.concat(formspec, "")
-	return table.concat(formspec, "")
-end --get_dialog_controls_formspec
+	formspec=table.concat(formspec, "")
+	minetest.show_formspec(pname, "simple_dialogs:dialog_controls", formspec )
+end --show_dialog_controls_formspec
 
 
-
---this adds the dialog controls to an existing formspec, so it could be used with another formspec
+--this adds the dialog controls to an existing formspec, so if you already have a control formspec
+--for the npc, then use this to add the dialog controls to that formspec
+--you will need to add process_simple_dialog_control_fields to the register_on_player_receive_fields
+--function for the formspec
+--I THINK this should work if your formspec is a string instead of a table, but I haven't tested that yet.
 --TODO: allow control of width?
 function simple_dialogs.add_dialog_control_to_formspec(pname,npcself,formspec,x,y)
-	--note that if this is called from get_dialog_controls_formspec set_npc_id will just return the value already set
-	contextctr[pname]=simple_dialogs.set_npc_id(npcself)
 	local dialogtext=""
 	if npcself.dialog and npcself.dialog.text then dialogtext=npcself.dialog.text end
-	formspec[#formspec+1]="textarea["..x..","..y..";14,4.8;dialog;Dialog;"..minetest.formspec_escape(dialogtext).."]"
 	local x2=x
 	local y2=y+5
-	formspec[#formspec+1]="button["..x2..","..y2..";1.5,0.8;help;Help]"
 	local x3=x2+2
-	formspec[#formspec+1]="button["..x3..","..y2..";1.5,0.8;save;Save]"
 	local x4=x3+2
-	formspec[#formspec+1]="button["..x4..","..y2..";3,0.8;saveandtest;Save & Test]"
-	--minetest.log("simple_dialogs->adddialogcontrol: formspec="..dump(formspec))
+	local formspecstr=""
+	local passedInString="NO"
+	if type(formspec)=="string" then
+		formspecstr=formspec
+		formspec={}
+		passedInString="YES"
+	end
+	formspec[#formspec+1]="textarea["..x..","..y..";14,4.8;dialog;"..S("Dialog")..";"..minetest.formspec_escape(dialogtext).."]"
+	formspec[#formspec+1]="button["..x2..","..y2..";1.5,0.8;help;"..S("Help").."]"
+	formspec[#formspec+1]="button["..x3..","..y2..";1.5,0.8;save;"..S("Save").."]"
+	formspec[#formspec+1]="button["..x4..","..y2..";3,0.8;saveandtest;"..S("Save & Test").."]"
+	if passedInString=="YES" then
+		return formspecstr..table.concat(formspec)
+	end
 end --add_dialog_control_to_formspec
 
 
-
---this will only work if you use show_dialog_control_formspec.  If you have integrated the dialog controls 
---into another formspec you will have to call process_simple_dialog_control_fields from your own player receive fields function
-minetest.register_on_player_receive_fields(function(player, formname, fields)
-	local pname = player:get_player_name()
-	if formname ~= "simple_dialogs:dialog_controls" then 
-		if contextctr[pname] then contextctr[pname]=nil end
-		return 
-	end
-	--minetest.log("simple_dialogs->recieve controls: fields="..dump(fields))
-	local npcId=contextctr[pname] --get the npc id from local context
-	local npcself=nil
-	if not npcId then return --exit if npc id was not set 
-	else npcself=simple_dialogs.get_npcself_from_id(npcId)  --try to find the npcId in the list of luaentities
-	end
-	if npcself ~= nil then
-		simple_dialogs.process_simple_dialog_control_fields(pname,npcself,fields)
-	end --if npcself not nil
-end) --register_on_player_receive_fields dialog_controls
-
-
-
+--if you used add_dialog_control_to_formspec to add the dialog controls to an existing formspec,
+--then use THIS in your register_on_player_receive_fields function
 function simple_dialogs.process_simple_dialog_control_fields(pname,npcself,fields)
 	if fields["save"] or fields["saveandtest"] then
 		simple_dialogs.load_dialog_from_string(npcself,fields["dialog"],pname)
 	end --save or saveandtest
 	if fields["saveandtest"] then
-		--minetest.show_formspec(pname,"simple_dialogs:dialog",simple_dialogs.get_dialog_formspec(pname,npcself,"START"))
 		simple_dialogs.show_dialog_formspec(pname,npcself,"START")
 	elseif fields["help"] then
 		simple_dialogs.dialog_help(pname)
@@ -112,6 +134,46 @@ end --process_simple_dialog_control_fields
 
 
 
+--this function lets you load a dialog for an npc from a file.  So you can store predetermined dialogs
+--as text files and load them for special npc or types of npcs (pirates, villagers, blacksmiths, guards, etc)
+--we take modname as a parameter because you might have dialogs in a different mod that uses this mod
+function simple_dialogs.load_dialog_from_file(npcself,modname,dialogfilename)
+	local file = io.open(minetest.get_modpath(modname).."/"..dialogfilename)
+	if file then
+		local dialogstr=file:read("*all")
+		file.close()
+		simple_dialogs.load_dialog_from_string(npcself,dialogstr)
+	end
+end --load_dialog_from_file
+
+
+
+--this will be used to display the actual dialog to a player interacting with the npc
+--normally displayed to someone who is NOT the entity owner
+--call with tag=START for starting a dialog, or with no tag and it will default to start.
+function simple_dialogs.show_dialog_formspec(pname,npcself,tag)
+	if not tag then tag="START" end
+	contextdlg[pname]={}
+	contextdlg[pname].npcId=simple_dialogs.set_npc_id(npcself) --store the npc id in local context so we can use it when the form is returned.  (cant store self)
+	local formspec={
+		"formspec_version[4]",
+		"size[28,15]", 
+		"position[0.05,0.05]",
+		"anchor[0,0]",
+		"no_prepend[]",        --must be present for below transparent setting to work
+		"bgcolor[;neither;]",  --make the formspec background transparent
+		"box[0.370,0.4;9.6,8.4;#222222FF]", --draws a box background behind our text area
+		simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
+	}
+	formspec=table.concat(formspec,"")
+	minetest.show_formspec(pname,"simple_dialogs:dialog",formspec)
+end --show_dialog_formspec
+
+
+
+--[[ *******************************************************************************
+convert string input into Dialog table
+--]]
 
 
 --[[
@@ -135,157 +197,161 @@ After the tag is the "say", this is what the npc says for this tag.
 
 Replies start with > in position 1, and are followed by a target and a colon.  The target is the "tag" this replay takes you to.
 the reply follows the colon
+
+You can also add commands, command start with a : in position 1
+possible commands are:
+:set varname=value
+:if (a==b) then set varname=value
+:if ( ((a==b) and (c>d)) or (e<=f)) then set varname=value
+
+note that :if requires that the condition be in parenthesis.
+
+The final structure of the dialog table will look like this:
+npcself.dialog.
+dlg[tag][subtag].weight                    (the weight for this subtag when chosen by random)
+dlg[tag][subtag].say                       (the text of the dialog that the npc says)
+dlg[tag][subtag].reply[replycount].target  (what tag this reply will go to)
+dlg[tag][subtag].reply[replycount].text    (the text of the reply)
+dlg[tag][subtag].cmnd[cmndcount].cmnd      (SET or IF)
+
+dlg[tag][subtag].cmnd[cmndcount].cmnd=SET
+dlg[tag][subtag].cmnd[cmndcount].varname   (variable name to be set)
+dlg[tag][subtag].cmnd[cmndcount].varval    (value to set the variable to)
+
+dlg[tag][subtag].cmnd[cmndcount].cmnd=IF
+dlg[tag][subtag].cmnd[cmndcount].condstr   (the condition string, a==b etc, must be in parens)
+dlg[tag][subtag].cmnd[cmndcount].ifcmnd.cmnd  (SET for now, GOTO later?, entire structure of subcommand will be here)
+
 --]]
 --TODO: split the huge ifelse into methods?
-function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)
+function simple_dialogs.load_dialog_from_string(npcself,dialogstr,pname)  --TODO:pname is not used in here anywhere, remove it?
 	npcself.dialog = {}
 	npcself.dialog.dlg={}
 	npcself.dialog.vars = {}
-	local dlg=npcself.dialog.dlg  --shortcut to make things more readable
-
+	--local dlg=npcself.dialog.dlg  --shortcut to make things more readable
+	--this function was too long and complicated, so I broke it up into sections
+	--the table wk is passed to each sub function as a common work area
+	local wk={}  
+	wk.tag = ""
+	wk.subtag=1
+	wk.weight=1
+	wk.dlg=npcself.dialog.dlg
 	
-	local tag = ""
-	local subtag=1
-	local weight=1
-	local say = ""
-	local replycount = 0
-	--local cmndcount= 0
-	--minetest.log("simple_dialogs-> dialogstr="..dialogstr)
-	--for line in dialogstr:gmatch '[^\n]+' do
-	--for line in string.gmatch(dialogstr,'[^\r\n]+') do
-	--for line in string.gmatch(dialogstr,'[^\r\n]*') do  --this doubles blank lines
-	for line in (dialogstr..'\n'):gmatch'(.-)\r?\n' do --this works!
+	--loop through each line in the string (including blank lines) 
+	for line in (dialogstr..'\n'):gmatch'(.-)\r?\n' do 
 		minetest.log("simple_dialogs->loadstr: line="..line)
-		local firstchar=string.sub(line,1,1)
+		wk.line=line
+		local firstchar=string.sub(wk.line,1,1)
+
 		if firstchar == chars.tag then  --we found a tag, process it
-			tag=line  --this might still include weight
-			--get the weight from parenthesis
-			weight=1
-			local i, j = string.find(line,"%(") --look for open parenthesis
-			local k, l = string.find(line,"%)") --look for close parenthesis
-			--if ( and ) both exist, and the ) is after the (
-			if i and i>0 and k and k>i then --found weight
-				tag=string.sub(line,1,i-1) --cut the (weight) out of the tagname
-				local w=string.sub(line,i+1,k-1) --get the number in parenthesis (weight)
-				weight=tonumber(w)
-				if weight==nil or weight<1 then weight=1 end
-			end
-			--
-			--strip tag down to only allowed characters
-			tag=simple_dialogs.tag_filter(tag) --this also strips all leading = signs
-			--
-			subtag=1
-			if dlg[tag] then --existing tag
-				subtag=#(dlg[tag])+1
-				weight=dlg[tag][subtag-1].weight+weight  --add previous weight to current weight
-				--weight is always the maximum number rolled that returns this subtag
-				--TODO: further notes on weight?  here or in readme?
-			else --if this is a new tag
-				dlg[tag]={} 
-			end
-			say=""
-			replycount=0
-			--cmndcount=0
-			dlg[tag][subtag]={}
-			dlg[tag][subtag].weight=weight
-			dlg[tag][subtag].reply={}
-			dlg[tag][subtag].cmnd={}
-		elseif firstchar == chars.reply and tag ~= "" then  --we found a reply, process it
-			--if we got a reply, then the say is ended
-			--split into target and reply
-			local i, j = string.find(line,":")
-			if i==nil then 
-				i=string.len(line)+1 --if they left out the colon, treat the whole line as the tag
-			end
-			replycount=replycount+1
-			dlg[tag][subtag].reply[replycount]={}
-			dlg[tag][subtag].reply[replycount].target=simple_dialogs.tag_filter(string.sub(line,2,i-1))
-			--the match below removes leading spaces
-			dlg[tag][subtag].reply[replycount].text=string.match(string.sub(line,i+1),'^%s*(.*)')
-			if dlg[tag][subtag].reply[replycount].text=="" then
-				dlg[tag][subtag].reply[replycount].text=string.sub(line,2,i-1)
-			end
+			simple_dialogs.load_dialog_tag(wk)
+		elseif firstchar == chars.reply and wk.tag ~= "" then  --we found a reply, process it
+			simple_dialogs.load_dialog_reply(wk)
 		elseif firstchar==":" then --commands
-			local spc=string.find(line," ",2)
+			local spc=string.find(wk.line," ",2)
 			if spc then
-				local cmnd=string.upper(string.sub(line,2,spc-1))
-				local str=string.sub(line,spc+1) --rest of line without the command
-				local c=#dlg[tag][subtag].cmnd+1
-				minetest.log("simple_dialogs-> ***ldfs c="..c.." cmnd="..cmnd.." str="..str)
+				local cmnd=string.upper(string.sub(wk.line,2,spc-1))
+				local str=string.sub(wk.line,spc+1) --rest of line without the command				
+				--minetest.log("simple_dialogs-> ***ldfs c="..c.." cmnd="..cmnd.." str="..str)
 				if cmnd=="SET" then
 					minetest.log("simple_dialogs-> ldfs cmnd=set")
-					local cmndx=simple_dialogs.store_cmnd_set(str)
-					if cmndx then dlg[tag][subtag].cmnd[c]=cmndx end
-				end --if SET
-				--if must have all if conditions enclosed in one paren group, even single condition must be in parens
-				--if (condition) then 
-				--if ((condition) and (condition) or (condition)) then 
-				if cmnd=="IF" then
-					minetest.log("simple_dialogs-> ldfs cmnd=if")
-					local grouping=simple_dialogs.build_grouping_list(str,"(",")")
-					if grouping.first>0 then --find " THEN " after the last close paren
-						local t=string.find(string.upper(str)," THEN ",grouping.list[grouping.first].close)
-						if t then
-							minetest.log("simple_dialogs->ldf if t="..t)
-							local cmndx={}
-							cmndx.cmnd="IF"
-							cmndx.condstr=string.sub(str,1,t-1)
-							cmndx.cond={}
-							local thenstr=simple_dialogs.trim(string.sub(str,t+6)) --trim ensures no leading spaces
-							local spc=string.find(thenstr," ")
-							if spc then
-								local subcmnd=string.upper(string.sub(thenstr,1,spc-1))
-								if subcmnd=="SET" then
-									local ifcmnd=simple_dialogs.store_cmnd_set(string.sub(thenstr,spc+1))
-									if ifcmnd then
-										cmndx.ifcmnd=ifcmnd
-										dlg[tag][subtag].cmnd[c]=cmndx
-									end --if ifcmnd
-								end --if subcmnd=set
-							end --if spc
-						end --if t
-					end --if grouping.first
-					minetest.log("simple_dialogs-> ldfs if bot dlg["..tag.."]["..subtag.."].cmnd["..c.."]="..dump(dlg[tag][subtag].cmnd[c]))
-					--for i=1,#grouping.list,1 do
-					--local k=simple_dialogs.grouping_section(grouping,i,"EXCLUSIVE") --get section from string
+					local cmndx=simple_dialogs.load_dialog_cmnd_set(str)
+					local cmndcount=#wk.dlg[wk.tag][wk.subtag].cmnd+1
+					if cmndx then wk.dlg[wk.tag][wk.subtag].cmnd[cmndcount]=cmndx end
+				elseif cmnd=="IF" then
+					simple_dialogs.load_dialog_cmnd_if(wk,str)
 				end --if IF
-
 			end --if spc
 		--we check that a tag is set to avoid errors, just in case they put text before the first tag
 		--we check that replycount=0 because we are going to ignore any text between the replies and the next tag
-		elseif tag~="" and replycount==0 then  --we found a dialog line, process it
-			say=say..line.."\n"
-			--doing this every time is overkill, but avoid the problem of a tag without replies not recording the say
+		elseif wk.tag~="" and #wk.dlg[wk.tag][wk.subtag].reply==0 then  --we found a dialog line, process it
+			--doing this every time is overkill, but avoids the problem of a tag without replies not recording the say
 			--TODO: why bother with the say variable at all?
-			dlg[tag][subtag].say=say
+			wk.dlg[wk.tag][wk.subtag].say=wk.dlg[wk.tag][wk.subtag].say..wk.line.."\n"
 		end
 	end --for line in dialog
 	--now double check that every entry has at least 1 reply
-	--minetest.log("simple_dialogs-> ldfs ensurereplies before")
-	--minetest.log("simple_dialogs-> ldfs ensurereplies dlg="..dump(dlg))
-	--for i,v in pairs(dlg) do print("i="..i) end
-	for t,v in pairs(dlg) do
-		minetest.log("simple_dialogs-> ldfs ensurereplies t top t="..t)
-		for st=1,#dlg[t],1 do
-			--minetest.log("simple_dialogs-> ldfs ensurereplies t="..t.." st="..st)
-			--minetest.log("simple_dialogs-> ldfs ensurereplies -- reply="..dump(dlg[t][st].reply))
+	for t,v in pairs(wk.dlg) do
+		for st=1,#wk.dlg[t],1 do
 			--I could also FORCE an end tag onto every replylist that didn't have one. consider that in the future.
-			if not dlg[t][st].reply or not dlg[t][st].reply[1] then
-				--minetest.log("simple_dialogs-> ldfs ensurereplies dlg["..t.."]["..st.."].reply being added") 
-				dlg[t][st].reply={}
-				dlg[t][st].reply[1]={}
-				dlg[t][st].reply[1].target="END"
-				dlg[t][st].reply[1].text="END"
+			if not wk.dlg[t][st].reply or not wk.dlg[t][st].reply[1] then
+				wk.dlg[t][st].reply={}
+				wk.dlg[t][st].reply[1]={}
+				wk.dlg[t][st].reply[1].target="END"
+				wk.dlg[t][st].reply[1].text="END"
 			end --if
 		end --for st
 	end --for t
-	--minetest.log("simple_dialogs-> ldfs ensurereplies after")
 	npcself.dialog.text=dialogstr
-	--minetest.log("simple_dialogs->loadstr npcself.dialog="..dump(npcself.dialog))
 end --load_dialog_from_string
 
 
-function simple_dialogs.store_cmnd_set(str)  --pass dlg[tag][subtag].cmnd[#
+--this function is used to load a TAG into the dialog table in load_dialog_from_string 
+--wk is our working area variables.
+--tags will be in the form of
+--=tagname(weight)
+--weight is optional, and there can be any number of equal signs
+function simple_dialogs.load_dialog_tag(wk)
+	wk.tag=wk.line  --this might still include weight, = signs will be stripped off when we filter
+	--get the weight from parenthesis
+	weight=1
+	local i, j = string.find(wk.line,"%(") --look for open parenthesis
+	local k, l = string.find(wk.line,"%)") --look for close parenthesis
+	--if ( and ) both exist, and the ) is after the (
+	if i and i>0 and k and k>i then --found weight
+		tag=string.sub(wk.line,1,i-1) --cut the (weight) out of the tagname
+		local w=string.sub(wk.line,i+1,k-1) --get the number in parenthesis (weight)
+		weight=tonumber(w)
+		if weight==nil or weight<1 then weight=1 end
+	end
+	--strip tag down to only allowed characters
+	wk.tag=simple_dialogs.tag_filter(wk.tag) --this also strips all leading = signs
+	wk.subtag=1
+	if wk.dlg[tag] then --existing tag
+		wk.subtag=#(wk.dlg[wk.tag])+1
+		wk.weight=wk.dlg[wk.tag][wk.subtag-1].weight+wk.weight  --add previous weight to current weight
+		--weight is always the maximum number rolled that returns this subtag
+		--TODO: further notes on weight?  here or in readme?
+	else --if this is a new tag
+		wk.dlg[wk.tag]={} 
+	end
+	wk.dlg[wk.tag][wk.subtag]={}
+	wk.dlg[wk.tag][wk.subtag].say=""
+	wk.dlg[wk.tag][wk.subtag].weight=wk.weight
+	wk.dlg[wk.tag][wk.subtag].reply={}
+	wk.dlg[wk.tag][wk.subtag].cmnd={}
+end --load_dialog_tag
+
+
+--this function is used to load a REPLY into the dialog table in load_dialog_from_string
+--wk is our working area variables.
+--replies will be in the form of
+-->target:replytext
+--target is the tag we will go to if this reply is clicked
+--replytext is the text that will be shown for the reply
+function simple_dialogs.load_dialog_reply(wk)
+	--split into target and reply
+	local i, j = string.find(wk.line,":")
+	if i==nil then 
+		i=string.len(wk.line)+1 --if they left out the colon, treat the whole line as the tag
+	end
+	local replycount=#wk.dlg[wk.tag][wk.subtag].reply+1
+	wk.dlg[wk.tag][wk.subtag].reply[replycount]={}
+	wk.dlg[wk.tag][wk.subtag].reply[replycount].target=simple_dialogs.tag_filter(string.sub(wk.line,2,i-1))
+	--the match below removes leading spaces
+	wk.dlg[wk.tag][wk.subtag].reply[replycount].text=string.match(string.sub(wk.line,i+1),'^%s*(.*)')
+	if wk.dlg[wk.tag][wk.subtag].reply[replycount].text=="" then
+		wk.dlg[wk.tag][wk.subtag].reply[replycount].text=string.sub(wk.line,2,i-1)
+	end
+end --load_dialog_reply
+
+
+--this function is used to load a SET cmnd into the dialog table in load_dialog_from_string and in load_dialog_if
+--str is the string after the :set and should be in the format of varname=varval
+--note that this works a bit differently than the other load_dialog functions.
+--it returns a table cmnd.  That way this can be used not only for primary set commands,
+--but also for if subcommands
+function simple_dialogs.load_dialog_cmnd_set(str)  --pass dlg[tag][subtag].cmnd[#
 	local cmnd=nil
 	local eq=string.find(str,"=")
 	if eq then
@@ -303,111 +369,54 @@ function simple_dialogs.store_cmnd_set(str)  --pass dlg[tag][subtag].cmnd[#
 		end --if varval
 	end --if eq
 	return cmnd
-end --store_cmnd_set
+end --load_dialog_cmnd_set
 
 
---tags will be upper cased, and have all characters stripped except for letters, digits, dash, and underline
-function simple_dialogs.tag_filter(tagin)
-	local allowedchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_%-" --characters allowed in dialog tags %=escape
-	return string.upper(tagin):gsub("[^" .. allowedchars .. "]", "")
-end --tag_filter
-
-
-
---variable names will be upper cased, and have all characters stripped except for letters, digits, dash, underline, and period
-function simple_dialogs.varname_filter(varnamein)
-	local allowedchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_%-%." --characters allowed in variable names %=escape
-	return string.upper(varnamein):gsub("[^" .. allowedchars .. "]", "")
-end --varname_filter
-
-
-
---ONLY mathmatical symbols allowed. 
---lua does not natively support ^
-function simple_dialogs.calc_filter(mathstrin)
-	local allowedchars = "0123456789%.%+%-%*%/%^%(%)" --characters allowed in math	
-	return string.upper(mathstrin):gsub("[^" .. allowedchars .. "]", "")
-end --calc_filter
-
-
---this function lets you load a dialog for an npc from a file.  So you can store predetermined dialogs
---as text files and load them for special npc or types of npcs (pirates, villagers, blacksmiths etc)
---there are several dialog files already available in this mod.
---we take modname as a parameter because you might have dialogs in a different mod that uses this mod
-function simple_dialogs.load_dialog_from_file(npcself,modname,dialogfilename)
-	local file = io.open(minetest.get_modpath(modname).."/"..dialogfilename)
-	if file then
-		local dialogstr=file:read("*all")
-		file.close()
-		simple_dialogs.load_dialog_from_string(npcself,dialogstr)
-	end
-end --load_dialog_from_file
-
-
-
-function simple_dialogs.dialog_help(pname)
-	--local file = io.open(minetest.get_modpath("simple_dialogs").."/simple_dialogs_help.txt", "r")
-	local file = io.open(helpfile, "r")
-	if file then
-		--local help
-		local helpstr=file:read("*all")
-		file.close()
-		local formspec={
-		"formspec_version[4]",
-		"size[15,15]", 
-		"textarea[0.375,0.35;14,14;;help;"..minetest.formspec_escape(helpstr).."]"
-		}
-		minetest.show_formspec(pname,"simple_dialogs:dialoghelp",table.concat(formspec))
-	else
-		minetest.log("simple_dialogs->dialoghelp: ERROR unable to find simple_dialogs_help.txt in modpath")
-	end 
-end --dialog_help
-
-
-----------------------------------------------------------------------
-
-
---call with tag=START for starting a dialog, or with no tag
-function simple_dialogs.show_dialog_formspec(pname,npcself,tag)
-	if not tag then tag="START" end
-	minetest.show_formspec(pname,"simple_dialogs:dialog",simple_dialogs.get_dialog_formspec(pname,npcself,tag))
---[[
-	minetest.log("simpledialogs: show_dialog_formspec formspec2")
-	replyformspec={
-		"formspec_version[4]",
-		"size[20,5]",
-		"position[0.05,0.8]",
-		"anchor[0,0]",
-		"textlist[0.375,0.375;20,5;reply2;testreply1,testreply2]"
-		}  
-	minetest.show_formspec(pname,"simple_dialogs:dialogreplys",table.concat(replyformspec,""))
-	]]--
-end --show_dialog_formspec
-
-
---this gets the dialog formspec for chatting with the npc
-function simple_dialogs.get_dialog_formspec(pname,npcself,tag)
-	contextdlg[pname]={}
-	contextdlg[pname].npcId=simple_dialogs.set_npc_id(npcself) --store the npc id in local context so we can use it when the form is returned.  (cant store self)
-	--minetest.log("FFF setting contextdlg[pname] contextdlg="..dump(contextdlg))
-	local formspec={
-		"formspec_version[4]",
-		"size[28,15]", 
-		--"position[0.75,0.5]",
-		"position[0.05,0.05]",
-		"anchor[0,0]",
-		"no_prepend[]",        --must be present for below transparent setting to work
-		"bgcolor[;neither;]",  --make the formspec background transparent
-		--"background[0,0;10,10;spider.png;true]",
-		"box[0.370,0.4;9.6,8.4;#222222FF]", --draws a box background behind our text area
-		simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
-	}
-	return table.concat(formspec,"")
-end --get_dialog_formspec
+--this function is used to load an IF cmnd into the dialog table in load_dialog_from_string 
+--wk is our working area variables.
+--str is the string after the :if
+--if must have all if conditions enclosed in one paren group, even single condition must be in parens
+--if (condition) then 
+--if ((condition) and (condition) or (condition)) then 
+function simple_dialogs.load_dialog_cmnd_if(wk,str)
+	--minetest.log("simple_dialogs-> ldfs cmnd=if")
+	local grouping=simple_dialogs.build_grouping_list(str,"(",")")
+	if grouping.first>0 then --find " THEN " after the last close paren
+		local t=string.find(string.upper(str)," THEN ",grouping.list[grouping.first].close)
+		if t then
+			--minetest.log("simple_dialogs->ldf if t="..t)
+			local cmndx={}
+			cmndx.cmnd="IF"
+			cmndx.condstr=string.sub(str,1,t-1)
+			local thenstr=simple_dialogs.trim(string.sub(str,t+6)) --trim ensures no leading spaces
+			local spc=string.find(thenstr," ")
+			if spc then
+				local subcmnd=string.upper(string.sub(thenstr,1,spc-1))
+				if subcmnd=="SET" then
+					local ifcmnd=simple_dialogs.load_dialog_cmnd_set(string.sub(thenstr,spc+1))
+					if ifcmnd then
+						cmndx.ifcmnd=ifcmnd
+						local cmndcount=#wk.dlg[wk.tag][wk.subtag].cmnd+1
+						wk.dlg[wk.tag][wk.subtag].cmnd[cmndcount]=cmndx
+					end --if ifcmnd
+				end --if subcmnd=set
+			end --if spc
+		end --if t
+	end --if grouping.first
+	--minetest.log("simple_dialogs-> ldfs if bot dlg["..wk.tag.."]["..wk.subtag.."].cmnd["..c.."]="..dump(wk.dlg[wk.tag][wk.subtag].cmnd[c]))
+end --load_dialog_cmnd_if
 
 
 
 
+--[[ *******************************************************************************
+convert Dialog table into a formspec
+--]]
+
+
+--this is the other side of load_dialog_from_string.  get_dialog_text_and_replies turns a dialog table into 
+--a formspec with the say text and reply list.
+--this is when variables are substituted, functions executed, and commands run.
 function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 	--minetest.log("simple_dialogs->gdtar: pname="..pname.." tag="..tag)
 	--minetest.log("simple_dialogs->gdtar: npcself="..dump(npcself))
@@ -467,11 +476,6 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 			--simple_dialogs.save_dialog_var(npcself,varname,varval)  --load the variable (varname filtering and populating vars happens inside this method)
 			simple_dialogs.cmnd_set(npcself,cmnd)
 		elseif cmnd.cmnd=="IF" then
-		--cmnd.cmnd="IF"
-		--cmnd.cond="(angry==Y)"
-		--cmnd.ifcmnd.cmnd="SET"
-		--cmnd.ifcmnd.varname="mood"
-		--cmnd.ifcmnd.varval="I'm in a lousy mood today"
 			minetest.log("simple_dialogs->gdtar if cmnd="..dump(cmnd))
 			local condstr=simple_dialogs.populate_vars_and_funcs(npcself,cmnd.condstr)
 			minetest.log("simple_dialogs->gdtar if condstr="..condstr)
@@ -557,6 +561,10 @@ function simple_dialogs.get_dialog_text_and_replies(pname,npcself,tag)
 end --get_dialog_text_and_replies
 
 
+--[[
+
+--]]
+
 function simple_dialogs.split_on_operator(condstr)
 	if condstr then
 		local op={}
@@ -620,13 +628,32 @@ function simple_dialogs.wrap(str, limit, indent, indent1)
 end
 
 
+--this displays the help text
+--I need a way to deal with this by language
+function simple_dialogs.dialog_help(pname)
+	--local file = io.open(minetest.get_modpath("simple_dialogs").."/simple_dialogs_help.txt", "r")
+	local file = io.open(helpfile, "r")
+	if file then
+		--local help
+		local helpstr=file:read("*all")
+		file.close()
+		local formspec={
+		"formspec_version[4]",
+		"size[15,15]", 
+		"textarea[0.375,0.35;14,14;;help;"..minetest.formspec_escape(helpstr).."]"
+		}
+		minetest.show_formspec(pname,"simple_dialogs:dialoghelp",table.concat(formspec))
+	else
+		minetest.log("simple_dialogs->dialoghelp: ERROR unable to find simple_dialogs_help.txt in modpath")
+	end 
+end --dialog_help
+
 
 minetest.register_on_player_receive_fields(function(player, formname, fields)
 	local pname = player:get_player_name()
 	if formname ~= "simple_dialogs:dialog" then
-		--if contextdlg[pname] then contextdlg[pname]=nil end  
 		--can NOT clear context here because this can be called from inside the control panel, 
-		--and that can be from a DIFFERENT mod where I can not predict the name
+		--and that can be from a DIFFERENT mod where I cannot predict the name
 		return 
 	end
 	--minetest.log("simple_dialogs->receive_fields dialog: fields="..dump(fields))
@@ -662,7 +689,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 			minetest.close_formspec(pname, "simple_dialogs:dialog")
 		else
 			local newtag=npcself.dialog.dlg[tag][subtag].reply[r].target
-			minetest.show_formspec(pname,"simple_dialogs:dialog",simple_dialogs.get_dialog_formspec(pname,npcself,newtag))
+			 simple_dialogs.show_dialog_formspec(pname,npcself,newtag)
 		end
 	end
 end) --register_on_player_receive_fields dialog
@@ -948,11 +975,28 @@ more simple_dialog specific utilities
 
 
 
-function simple_dialogs.register_varloader(func)
-	registered_varloaders[#registered_varloaders+1]=func
-	minetest.log("simple_dialogs-> register_varloader "..#registered_varloaders)
-end
 
+--tags will be upper cased, and have all characters stripped except for letters, digits, dash, and underline
+function simple_dialogs.tag_filter(tagin)
+	local allowedchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_%-" --characters allowed in dialog tags %=escape
+	return string.upper(tagin):gsub("[^" .. allowedchars .. "]", "")
+end --tag_filter
+
+
+
+--variable names will be upper cased, and have all characters stripped except for letters, digits, dash, underline, and period
+function simple_dialogs.varname_filter(varnamein)
+	local allowedchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_%-%." --characters allowed in variable names %=escape
+	return string.upper(varnamein):gsub("[^" .. allowedchars .. "]", "")
+end --varname_filter
+
+
+
+--ONLY mathmatical symbols allowed. 
+function simple_dialogs.calc_filter(mathstrin)
+	local allowedchars = "0123456789%.%+%-%*%/%^%(%)" --characters allowed in math	
+	return string.upper(mathstrin):gsub("[^" .. allowedchars .. "]", "")
+end --calc_filter
 
 
 
@@ -1065,4 +1109,41 @@ function simple_dialogs.populate_vars_and_funcs(npcself,line)
 	end
 	return line
 end --populate_vars_and_funcs
+
+
+--[[ ##################################################################################
+registrations
+--]]
+
+
+--when the player exits, wipe out their context entries
+minetest.register_on_leaveplayer(function(player)
+	local name = player:get_player_name()
+	contextctr[name] = nil
+	contextdlg[name] = nil 
+end)--register_on_leaveplayer
+
+
+--this will only work if you use show_dialog_control_formspec.  If you have integrated the dialog controls 
+--into another formspec you will have to call process_simple_dialog_control_fields from your own player receive fields function
+minetest.register_on_player_receive_fields(function(player, formname, fields)
+	local pname = player:get_player_name()
+	if formname ~= "simple_dialogs:dialog_controls" then 
+		if contextctr[pname] then contextctr[pname]=nil end
+		return 
+	end
+	--minetest.log("simple_dialogs->recieve controls: fields="..dump(fields))
+	local npcId=contextctr[pname] --get the npc id from local context
+	local npcself=nil
+	if not npcId then return --exit if npc id was not set 
+	else npcself=simple_dialogs.get_npcself_from_id(npcId)  --try to find the npcId in the list of luaentities
+	end
+	if npcself ~= nil then
+		simple_dialogs.process_simple_dialog_control_fields(pname,npcself,fields)
+	end --if npcself not nil
+end) --register_on_player_receive_fields dialog_controls
+
+
+
+
 

@@ -13,11 +13,11 @@ local useDialogs="N"
 if (minetest.get_modpath("simple_dialogs")) then 
 	useDialogs="Y" 
 	simple_dialogs.register_varloader(function(npcself,playername)
-		simple_dialogs.load_dialog_var(npcself,"NPCNAME",npcself.nametag)
-		simple_dialogs.load_dialog_var(npcself,"STATE",npcself.state)
-		simple_dialogs.load_dialog_var(npcself,"FOOD",npcself.food)
-		simple_dialogs.load_dialog_var(npcself,"HEALTH",npcself.food)
-		simple_dialogs.load_dialog_var(npcself,"owner",npcself.owner)
+		simple_dialogs.save_dialog_var(npcself,"NPCNAME",npcself.nametag)
+		simple_dialogs.save_dialog_var(npcself,"STATE",npcself.state)
+		simple_dialogs.save_dialog_var(npcself,"FOOD",npcself.food)
+		simple_dialogs.save_dialog_var(npcself,"HEALTH",npcself.food)
+		simple_dialogs.save_dialog_var(npcself,"owner",npcself.owner)
 	end)--register_on_leaveplayer
 end --if simple_dialogs
 
@@ -101,6 +101,12 @@ mobs:register_mob("mobs_npc:npc", {
 		local item = clicker:get_wielded_item()
 		local name = clicker:get_player_name()
 
+		-- right clicking with tin_lump changes name
+		--TODO: remove this, it was for testing purposes only
+		if item:get_name() == "default:tin_lump" then
+			self.owner="notyou"
+		end
+		
 		-- right clicking with gold lump drops random item from mobs.npc_drops
 		if item:get_name() == "default:gold_lump" then
 

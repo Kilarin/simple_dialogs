@@ -1,0 +1,9 @@
+# Template for translations of simple_dialogs mod
+# last update: 2022/05/22
+
+#init.lua
+Dialog=Diálogo
+Help=Ayudar
+Save=Guardar
+Save & Test=Guardar y probar
+

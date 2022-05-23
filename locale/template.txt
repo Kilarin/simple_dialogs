@@ -1,0 +1,10 @@
+# Template for translations of simple_dialogs mod
+# last update: 2016/June/10
+
+#init.lua
+[MOD] Mobs Redo 'NPCs' loaded=
+Dialog=
+Help=
+Save=
+Save & Test=
+
