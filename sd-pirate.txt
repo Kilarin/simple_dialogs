@@ -13,7 +13,8 @@ You snuck up on me lad.  What be ye doin here landlubber?
 >name:What is your name
 >arrg:Why do pirates always say Arrrgh?
 >treasure:I'm looking for treasure.  Can you tell me where the treasure is?
->rude:What's got you so cranky?  Did a beaver chew on your leg?
+>rude:What's got you so cranky?  Did a beaver chew on your wooden leg?
+>end:Good bye.
 
 ===start(5)
 Batten down the hatches, if it ain't a landlubber come to call.  What be you doin here @[playername]@?

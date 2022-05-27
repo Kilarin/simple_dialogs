@@ -13,10 +13,13 @@ chars.reply=">"
 chars.varopen="@["
 chars.varclose="]@"
 
+local max_goto_depth=3 --TODO:move these to config
+
 local helpfile=minetest.get_modpath("simple_dialogs").."/simple_dialogs_help.txt"
 local transparentpng=minetest.get_modpath("simple_dialogs").."/transparent.png"
 
 local registered_varloaders={}
+local registered_hooks={}
 
 
 
@@ -67,6 +70,13 @@ Methods used when integrating simple_dialogs with an entity mod
 function simple_dialogs.register_varloader(func)
 	registered_varloaders[#registered_varloaders+1]=func
 end
+
+
+--register hook
+function simple_dialogs.register_hook(func)
+	registered_hooks[#registered_hooks+1]=func
+end
+
 
 
 --the dialog control formspec is where an owner can create a dialog for an npc
@@ -226,6 +236,9 @@ dlg[tag][subtag].cmnd[cmndcount].cmnd=IF
 dlg[tag][subtag].cmnd[cmndcount].condstr   (the condition string, a==b etc, must be in parens)
 dlg[tag][subtag].cmnd[cmndcount].ifcmnd.cmnd  (SET for now, GOTO later?, entire structure of subcommand will be here)
 
+dlg[tag][subtag].gototag.tag               (used by goto to indicate which tag to goto)
+dlg[tag][subtag].gototag.count             (goto depth count, used to ensure you can not get into an infinite goto loop)
+
 --]]
 function simple_dialogs.load_dialog_from_string(npcself,dialogstr)
 	npcself.dialog = {}
@@ -263,6 +276,12 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr)
 					if cmndx then wk.dlg[wk.tag][wk.subtag].cmnd[cmndcount]=cmndx end
 				elseif cmnd=="IF" then
 					simple_dialogs.load_dialog_cmnd_if(wk,str)
+				elseif cmnd=="GOTO" then
+					local cmndx={}
+					cmndx.cmnd="GOTO"
+					cmndx.tag=simple_dialogs.tag_filter(str)
+					local cmndcount=#wk.dlg[wk.tag][wk.subtag].cmnd+1
+					wk.dlg[wk.tag][wk.subtag].cmnd[cmndcount]=cmndx
 				end --if IF
 			end --if spc
 		--we check that a tag is set to avoid errors, just in case they put text before the first tag
@@ -296,15 +315,15 @@ end --load_dialog_from_string
 function simple_dialogs.load_dialog_tag(wk)
 	wk.tag=wk.line  --this might still include weight, = signs will be stripped off when we filter
 	--get the weight from parenthesis
-	weight=1
+	wk.weight=1
 	local i, j = string.find(wk.line,"%(") --look for open parenthesis
 	local k, l = string.find(wk.line,"%)") --look for close parenthesis
 	--if ( and ) both exist, and the ) is after the (
 	if i and i>0 and k and k>i then --found weight
 		wk.tag=string.sub(wk.line,1,i-1) --cut the (weight) out of the tagname
 		local w=string.sub(wk.line,i+1,k-1) --get the number in parenthesis (weight)
-		weight=tonumber(w)
-		if weight==nil or weight<1 then weight=1 end
+		wk.weight=tonumber(w)
+		if wk.weight==nil or wk.weight<1 then wk.weight=1 end
 		--minetest.log("simple_dialogs->ldt line="..wk.line.." tag="..wk.tag.." i="..i.." k="..k.." w="..w)
 	end
 	--strip tag down to only allowed characters
@@ -341,6 +360,7 @@ function simple_dialogs.load_dialog_reply(wk)
 	end
 	local replycount=#wk.dlg[wk.tag][wk.subtag].reply+1
 	wk.dlg[wk.tag][wk.subtag].reply[replycount]={}
+	--TODO: use variables for targets, filter later, not here?
 	wk.dlg[wk.tag][wk.subtag].reply[replycount].target=simple_dialogs.tag_filter(string.sub(wk.line,2,i-1))
 	--the match below removes leading spaces
 	wk.dlg[wk.tag][wk.subtag].reply[replycount].text=string.match(string.sub(wk.line,i+1),'^%s*(.*)')
@@ -417,6 +437,34 @@ end --load_dialog_cmnd_if
 convert Dialog table into a formspec
 --]]
 
+--this is kind of an awkward solution for handling gotos, but it works.
+--the meat of the formspec creation happens in dialog_to_formspec_inner
+--but if that process hits a "goto", then it increments gototag.count
+--and if gototag.count<4 it sets gototag.tag and returns.
+--then this function calls dialog_to_formspec_inner AGAIN with the new tag.
+--if gototag>=4 then we ignore it.  This prevents any possibility of an eternal loop
+function simple_dialogs.dialog_to_formspec(pname,npcself,tag)
+	--first we make certain everything is properly defined.  if there is an error we do NOT want to crash
+	--but we do return an error message that might help debug.
+	local errlabel="label[0.375,0.5; ERROR in dialog_to_formspec, "
+	if not npcself then return errlabel.." npcself not found]" 
+	elseif not npcself.dialog then return errlabel.." npcself.dialog not found]" 
+	elseif not tag then return errlabel.." tag passed was nil]"
+	elseif not npcself.dialog.dlg[tag] then return errlabel.. " tag "..tag.." not found in the dialog]"
+	end
+	npcself.dialog.gototag={}
+	local gototag=npcself.dialog.gototag
+	gototag.count=0
+	gototag.tag=tag  --because this is where we are going first, will get changed and pop out if we hit a goto
+	local formspec
+	repeat
+		--minetest.log("simple_dialogs->dtf before")
+		formspec=simple_dialogs.dialog_to_formspec_inner(pname,npcself)
+		--minetest.log("simple_dialogs->dtf after gototag="..dump(gototag))
+		until not gototag.tag
+	return formspec
+end
+
 
 --[[
 this is the other side of load_dialog_from_string.  dialog_to_formspec turns a dialog table into 
@@ -435,19 +483,14 @@ dlg[Treasure][3].weight=13   (6+7=13)
 this means we can just roll a random number between 1 and 13,
 then select the first subtag for which our random number is less than or equal to its weight.
 --]]
-function simple_dialogs.dialog_to_formspec(pname,npcself,tag)
+function simple_dialogs.dialog_to_formspec_inner(pname,npcself)
 	--minetest.log("simple_dialogs->dtf pname="..pname.." tag="..tag)
 	--minetest.log("simple_dialogs->dtf: npcself="..dump(npcself))
-	--first we make certain everything is properly defined.  if there is an error we do NOT want to crash
-	--but we do return an error message that might help debug.
-	local errlabel="label[0.375,0.5; ERROR in dialog_to_formspec, "
-	if not npcself then return errlabel.." npcself not found]" 
-	elseif not npcself.dialog then return errlabel.." npcself.dialog not found]" 
-	elseif not tag or tag==nil then return errlabel.." tag passed was nil]"
-	elseif not npcself.dialog.dlg[tag] then return errlabel.. " tag "..tag.." not found in the dialog]"
-	end
 
+	
 	local dlg=npcself.dialog.dlg  --shortcut to make things more readable
+	local tag=npcself.dialog.gototag.tag
+	npcself.dialog.gototag.tag=nil --will be set again if we hit a goto
 	
 	--add playername to variables IF it was passed in
 	if pname then simple_dialogs.save_dialog_var(npcself,"PLAYERNAME",pname) end
@@ -482,14 +525,8 @@ function simple_dialogs.dialog_to_formspec(pname,npcself,tag)
 	--minetest.log("simple_dialogs->dtf tag="..tag.." subtag="..subtag)
 	--minetest.log("simple_dialogs->dtf dlg["..tag.."]["..subtag.."]="..dump(dlg[tag][subtag]))
 	for c=1,#dlg[tag][subtag].cmnd do
-		local cmnd=dlg[tag][subtag].cmnd[c]
-		--minetest.log("simple_dialogs->dtf c="..c.." cmnd="..dump(cmnd))
-		--local cmndname=dlg[tag][subtag].cmnd[c].cmnd
-		if cmnd.cmnd=="SET" then
-			simple_dialogs.execute_cmnd_set(npcself,cmnd)
-		elseif cmnd.cmnd=="IF" then
-			simple_dialogs.execute_cmnd_if(npcself,cmnd)
-		end --if cmnd
+		--minetest.log("simple_dialogs->dtf c="..c.." cmnd="..dump(dlg[tag][subtag].cmnd[c]))
+		simple_dialogs.execute_cmnd(npcself,dlg[tag][subtag].cmnd[c])
 	end --for c
 	--
 	--populate the say portion of the dialog, that is simple.
@@ -522,17 +559,28 @@ function simple_dialogs.dialog_to_formspec(pname,npcself,tag)
 end --dialog_to_formspec
 
 
+--you pass in a cmnd table, and this will execute the command.
+--this is called from dialog_to_formspec, but it is ALSO called recursively on if, 
+--because if the if condition is met, we then execute the ifcmnd
+--for the structure of each cmnd table, check the documentation on load_dialog_from_string
+function simple_dialogs.execute_cmnd(npcself,cmnd)
+	--minetest.log("simple_dialogs->ec cmnd="..dump(cmnd))
+	--local dlg=npcself.dialog.dlg
+	if cmnd.cmnd=="SET" then
+		simple_dialogs.save_dialog_var(npcself,cmnd.varname,cmnd.varval)  --load the variable (varname filtering and populating vars happens inside this method)
+	elseif cmnd.cmnd=="IF" then
+		simple_dialogs.execute_cmnd_if(npcself,cmnd)
+	elseif cmnd.cmnd=="GOTO" then
+		local gototag=npcself.dialog.gototag
+		gototag.count=gototag.count+1
+		if gototag.count<=max_goto_depth then --gototag.count guarantees no infinate goto loops
+			gototag.tag=cmnd.tag
+			return ""
+		end --if gototag.count
+	end --if cmnd
+end --execute_cmnd
 
---this executes a :set command, run during dialog_to_formspec
---pass dlg[tag][subtag].cmnd[c] 
---cmnd.cmnd="SET"
---cmnd.varname
---cmnd.varval
-function simple_dialogs.execute_cmnd_set(npcself,cmnd)
-	--minetest.log("simple_dialogs->cs bfr cmnd="..dump(cmnd))
-	simple_dialogs.save_dialog_var(npcself,cmnd.varname,cmnd.varval)  --load the variable (varname filtering and populating vars happens inside this method)
-	--minetest.log("simple_dialogs->cs aft cmnd="..dump(cmnd))
-end--cmnd_set
+
 
 
 
@@ -540,7 +588,10 @@ end--cmnd_set
 --pass dlg[tag][subtag].cmnd[c] 
 --cmnd.cmnd="IF"
 --cmnd.condstr  This will be the condition, example: ( ( (hitpoints<10) and (name=="badguy") ) or (status=="asleep") )
---cmnd.ifcmnd   This is the command that will be executed if condstr evaluates as true. full cmnd table, right now SET is only option, GOTO later?, entire structure of subcommand will be here
+--cmnd.ifcmnd   This is the command that will be executed if condstr evaluates as true. entire structure of subcommand will be here
+--yes, this makes a recursive call, the ifcmnd can even be another if statement.
+--BUT, there should be no danger of infinite recursion, because the cmnd structure can NOT be altered during processing.
+--so there will always be a finite depth to the recursion.
 function simple_dialogs.execute_cmnd_if(npcself,cmnd)
 	--minetest.log("simple_dialogs->eci cmnd="..dump(cmnd))
 	--first thing, populate any vars and run any functions in the condition string
@@ -566,10 +617,13 @@ function simple_dialogs.execute_cmnd_if(npcself,cmnd)
 	--minetest.log("simple_dialogs->eci if after calc ifrslt="..ifrslt)
 	--now if ifrslt=0 test failed.  if ifrslt>0 test succeded
 	if ifrslt>0 then
-		if cmnd.ifcmnd.cmnd=="SET" then
-			--minetest.log("simple_dialogs->eci if executing set")
-			simple_dialogs.execute_cmnd_set(npcself,cmnd.ifcmnd)
-		end --ifcmnd SET
+		--if cmnd.ifcmnd.cmnd=="SET" then
+		--	--minetest.log("simple_dialogs->eci if executing set")
+		--	simple_dialogs.execute_cmnd_set(npcself,cmnd.ifcmnd)
+		--end --ifcmnd SET
+		--if the if condition was met, then we execute the ifcmnd, which can be any command
+		simple_dialogs.execute_cmnd(npcself,cmnd.ifcmnd)
+
 	end --ifrst
 end --execute_cmnd_if
 

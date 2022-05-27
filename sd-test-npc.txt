@@ -6,6 +6,7 @@ Chose a reply to test various aspects of simple dialogs
 >iftest:using :If to set things conditionaly based on variables values
 >weight:multiple possible outcomes (weighted tags)
 >errors:Test to see if we can make simple_dialogs crash?
+>gototest:Various tests of GOTO
 :set angry=Y
 :set FriendList=|superman|spiderman|batman|wonderwoman|
 angry and friendlist are set here, but are not used here.  They are used elsewhere.
@@ -176,3 +177,32 @@ What happens if you have a tag with no replies?
 >errors:back to primary error dialog
 >start:Back to the very beginning.
 
+===gototest
+This is a simple test of goto, you should not see this screen
+>end
+:goto someplaceelse
+
+===someplaceelse
+This is someplace else.  Whenever you go to gototest, it has a goto that takes you here.  So you never actually see gototest
+>start:back to the begining
+>gototest:back to the first gototest dialog, which will take you back here.
+>gotoloop1:test a goto loop
+>end
+
+===gotoloop1
+This is gotoloop1, it goes to gotoloop2 (which goes to gotoloop1)
+This will NOT form an enternal loop because simple_dialogs will automatically break out of the loop
+:goto gotoloop2
+>start:back to the begining
+>gototest:back to the first gototest dialog, which will take you back here.
+>gotoloop1:test a goto loop
+>end
+
+===gotoloop2
+this is gotoloop2, it goes to gotoloop1 (which goes to gotoloop2)
+This will NOT form an enternal loop because simple_dialogs will automatically break out of the loop
+:goto gotoloop1
+>start:back to the begining
+>gototest:back to the first gototest dialog, which will take you back here.
+>gotoloop1:test a goto loop
+>end
