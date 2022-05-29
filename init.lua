@@ -464,7 +464,6 @@ function simple_dialogs.dialog_to_formspec(pname,npcself,topic)
 	if not npcself then return errlabel.." npcself not found]" 
 	elseif not npcself.dialog then return errlabel.." npcself.dialog not found]" 
 	elseif not topic then return errlabel.." topic passed was nil]"
-	elseif not npcself.dialog.dlg[topic] then return errlabel.. " topic "..topic.." not found in the dialog]"
 	end
 	npcself.dialog.gototopic={}
 	local gototopic=npcself.dialog.gototopic
@@ -472,6 +471,8 @@ function simple_dialogs.dialog_to_formspec(pname,npcself,topic)
 	gototopic.topic=topic  --because this is where we are going first, will get changed and pop out if we hit a goto
 	local formspec
 	repeat
+		--this check has to be inside the repeat to catch topics changed by goto
+		if not npcself.dialog.dlg[topic] then return errlabel.. " topic "..topic.." not found in the dialog]" end 
 		--minetest.log("simple_dialogs->dtf before")
 		formspec=simple_dialogs.dialog_to_formspec_inner(pname,npcself)
 		--minetest.log("simple_dialogs->dtf after gototopic="..dump(gototopic))
@@ -504,6 +505,7 @@ function simple_dialogs.dialog_to_formspec_inner(pname,npcself)
 	
 	local dlg=npcself.dialog.dlg  --shortcut to make things more readable
 	local topic=npcself.dialog.gototopic.topic
+
 	npcself.dialog.gototopic.topic=nil --will be set again if we hit a goto
 	
 	--add playername to variables IF it was passed in
@@ -583,19 +585,22 @@ end --dialog_to_formspec
 function simple_dialogs.execute_cmnd(npcself,cmnd)
 	--minetest.log("simple_dialogs->ec cmnd="..dump(cmnd))
 	--local dlg=npcself.dialog.dlg
-	if cmnd.cmnd=="SET" then
-		--minetest.log("simple_dialogs ec set cmnd="..dump(cmnd))
-		simple_dialogs.save_dialog_var(npcself,cmnd.varname,cmnd.varval)  --load the variable (varname filtering and populating vars happens inside this method)
-	elseif cmnd.cmnd=="IF" then
-		simple_dialogs.execute_cmnd_if(npcself,cmnd)
-	elseif cmnd.cmnd=="GOTO" then
-		local gototopic=npcself.dialog.gototopic
-		gototopic.count=gototopic.count+1
-		if gototopic.count<=max_goto_depth then --gototopic.count guarantees no infinate goto loops
-			gototopic.topic=cmnd.topic
-			return ""
-		end --if gototopic.count
-	end --if cmnd
+	if cmnd then
+		if cmnd.cmnd=="SET" then
+			--minetest.log("simple_dialogs ec set cmnd="..dump(cmnd))
+			simple_dialogs.save_dialog_var(npcself,cmnd.varname,cmnd.varval)  --load the variable (varname filtering and populating vars happens inside this method)
+		elseif cmnd.cmnd=="IF" then
+			simple_dialogs.execute_cmnd_if(npcself,cmnd)
+		elseif cmnd.cmnd=="GOTO" then
+			local gototopic=npcself.dialog.gototopic
+			gototopic.count=gototopic.count+1
+			--we only goto the new topic if we have not exceeded depth, and the topic exists.
+			if gototopic.count<=max_goto_depth and npcself.dialog.dlg[cmnd.topic] then --gototopic.count guarantees no infinate goto loops
+				gototopic.topic=cmnd.topic
+				return ""
+			end --if gototopic.count
+		end --if cmnd=
+	end --if cmnd exists
 end --execute_cmnd
 
 
@@ -972,6 +977,7 @@ very generic utilities
 
 --trims leading and trailing spaces
 function simple_dialogs.trim(s)
+	if not s then s="" end
 	return s:match "^%s*(.-)%s*$"
 end
 
@@ -1168,8 +1174,9 @@ function simple_dialogs.populate_funcs(npcself,line)
 		if grouping then
 			for g=1,#grouping.list,1 do
 				local str=grouping.list[g].parm[1]  --populate_vars should always already have happened
+				local testchar=string.sub(string.upper(simple_dialogs.trim(str).." "),1,1) --trim can not return nil
 				local rtn="No"
-				if str=="1" or string.upper(str)=="Y" then rtn="Yes" end
+				if testchar=="1" or testchar=="Y" then rtn="Yes" end
 				line=simple_dialogs.grouping_replace(grouping,g,rtn,"INCLUSIVE")
 			end --for
 		end --if grouping YesNo

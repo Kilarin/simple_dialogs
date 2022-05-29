@@ -24,6 +24,7 @@ start is just used to set up some variables
 :set ransomeplaceelse=
 :set rangotoloop=
 :set ranfunctions=
+:set ranerrors=
 :goto begin
 
 All of the crazy ran variables are just to make it easy to tell you ran through all the tests.
@@ -36,12 +37,12 @@ Chose a reply to test various aspects of simple dialogs
 :if ((@[ranbasiciftest]@==*) and (@[ranifgoto]@==*)) then set raniftest=*
 :if ((@[ranpuppy]@==*) and (@[rantreasuremap]@==*)) then set ranweight=*
 :if ((@[ransomeplaceelse]@==*) and (@[rangotoloop]@==*)) then set rangoto=*
->vartest:@[ranvartest]@ Test variables @[playername]@
+>vartest:@[ranvartest]@ Test variables
 >iftest:@[raniftest]@ Test :If to set things conditionaly based on variables values
 >weight:@[ranweight]@ Test multiple possible outcomes (weighted topics)
 >gototest:@[rangoto]@ Test GOTO functionality
 >functions:@[ranfunctions]@ Test functions
->errors:Test to see if we can make simple_dialogs crash?
+>errors:@[ranerrors]@ Test to see if we can make simple_dialogs crash?
 
 --------------------------------------------
 
@@ -74,7 +75,7 @@ The variable friendlist2 was set to the same as list, but batman was removed wit
 friendlist2=@[friendlist2]@
 
 the variable angry was set in a different topic, but can still be displayed here because variables live for as long as the npc lives.
-Am I angry? @[angry]@
+Am I angry? yesno(@[angry]@)
 :set ransetvars=*
 :set location=mountaains
 :set FriendList=add(FriendList,@[playername]@)
@@ -87,7 +88,7 @@ Am I angry? @[angry]@
 ===iftest
 the :if command allows you to operate any other command (primarily set or goto) based on conditions
 Remember when using it that ALL conditions must be enclosed in parenthesis
-and that variables should be in @[brackets]@ if you want them replaces with their values
+and that variables should be in @[brackets]@ if you want them replaced with their values
 >basiciftest:@[ranbasiciftest]@ Test setting variables using :if
 >ifgoto:@[ranifgoto]@ Test using if to goto another topic
 >begin:Back to the begining
@@ -96,7 +97,7 @@ and that variables should be in @[brackets]@ if you want them replaces with thei
 ===basiciftest
 This dialog illustrates using the command :if to set variables
 
-am I angry right now? @[angry]@
+am I angry right now? yesno(@[angry]@)
 The below "mood" line is based on the status of angry
 @[mood]@
 
@@ -106,6 +107,7 @@ Are you in my friendlist? YesNo(isinlist(FriendList,@[playername]@))
 The below line changes based on both angry AND whether the player is in friendlist
 
 And what do I think about you? @[friendstatus]@
+angry=@[angry]@<
 
 :set mood=I guess I'm just in a good mood
 :if (@[angry]@==Y) then set mood=I'm in a lousy mood today
@@ -333,6 +335,7 @@ All of this should be ignored and none of it should cause a crash
 :set var4=@[var
 :set var5=5]@
 :badcommand nothing here should matter
+:
 :set
 :set =3
 :set @[var6]@=calc(3/0)
@@ -345,15 +348,27 @@ All of this should be ignored and none of it should cause a crash
 :if (@[doesnotexist]@==flaming@[doesnotexist]@@[var2]@@[var5]@ calc(3/0)) then
 :if () then set x=3
 :if then
->topicwithnoreplies:test if a topic with no replies will crash
->topicwithnodialog:test if a topic with no dialog will crash
->doesnotexist:test if a reply target pointing at a topic that does not exist will crash.
+:if (1=1) then goto
+:if (1=1) then goto topicdoesnotexist
+:goto
+:goto topicdoesnotexist
+:set test=exists(
+:set test=yesno()
+:set test=yesno(calc(5/0))
+:set test=yesno(calc(3+2))
+:set ranerrors=*
+>topicwithnodialog:Test if a topic with no dialog will crash
+>topicwithnoreplies:Test if a topic with no replies will crash (you will not be able to return)
+>topicwithnothing:Test if a topic with nothing in it at all will crash (you will not be able to return)
+>doesnotexist:Test if a reply target pointing at a topic that does not exist will crash. (you will not be able to return)
 >begin:Back to the begining
+>End
 
 ===topicwithnoreplies
 What happens if you have a topic with no replies?
 (an END reply is automagically added)
 
+===topicwithnothing
 ===topicwithnodialog
->errors:back to primary error dialog
+>errors:@[ranerrors]@ back to primary error dialog
 >begin:Back to the begining
