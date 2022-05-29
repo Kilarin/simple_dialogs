@@ -789,10 +789,12 @@ function simple_dialogs.dialog_var_exists(npcself,varname)
 	if npcself and varname then
 		if not npcself.dialog.vars then npcself.dialog.vars = {} end
 		varname=simple_dialogs.varname_filter(varname)  --filter down to only allowed chars, no need for trim since spaces are not allowed
-		if npcself.dialog.vars[varname] then return "1"
+		if npcself.dialog.vars[varname] then 
+			return "1"
 		else return "0"
 		end
 	end
+	return "0" --shouldnt get here
 end --dialog_var_exists
 
 --------------------------------------------------------------
@@ -1092,6 +1094,14 @@ end --populate_vars
 
 --this function executes the add(var,value) and rmv(var,value) and IsInList() and NotInList() and calc() functions
 --do not call this directly, use populate_vars_and_funcs instead
+--calc(math)
+--add(variable,stringtoadd)
+--rmv(variable,stringtoremove)
+--isinlist(variable,stringtolookfor)
+--NotInList(variable,stringtolookfor)
+--Exists(varname)       returns true of the variable exists in the list, false otherwise
+--NotExists(varname)    returns true of the variable does NOT exists in the list, false if it does
+--YesNo(func())         convert 0 or N into No and 1 or Y into Yes (for display purposes)  (Do not use direcly in if as it does not return 0 or 1)
 function simple_dialogs.populate_funcs(npcself,line)
 	--minetest.log("simple_dialogs->pf top line="..line)
 	if npcself and npcself.dialog.vars and line then
@@ -1146,6 +1156,12 @@ function simple_dialogs.populate_funcs(npcself,line)
 		--NOTINLIST NotInList(variable,stringtolookfor) returns 1 if not in the list, 0 if it is in the list
 		grouping=simple_dialogs.func_splitter(line,"NOTINLIST",2)
 		line=simple_dialogs.in_list(npcself,grouping,"NOT",line)
+		--NotExists(varname) returns true of the variable does NOT exists in the list, false if it does
+		grouping=simple_dialogs.func_splitter(line,"NOTEXISTS",1)
+		line=simple_dialogs.does_var_exist(npcself,grouping,"NOT",line)
+		--Exists(varname) returns true of the variable exists in the list, false otherwise
+		grouping=simple_dialogs.func_splitter(line,"EXISTS",1)
+		line=simple_dialogs.does_var_exist(npcself,grouping,"IS",line)
 		--YesNo(func())  YesNo turn 0 or N into No and 1 or Y into Yes (for display purposes)
 		--do NOT use YesNo in a :if!!!!
 		grouping=simple_dialogs.func_splitter(line,"YESNO",1)
@@ -1157,12 +1173,7 @@ function simple_dialogs.populate_funcs(npcself,line)
 				line=simple_dialogs.grouping_replace(grouping,g,rtn,"INCLUSIVE")
 			end --for
 		end --if grouping YesNo
-		--Exists(varname) returns true of the variable exists in the list, false otherwise
-		grouping=simple_dialogs.func_splitter(line,"EXISTS",1)
-		line=simple_dialogs.does_var_exist(npcself,grouping,"IS",line)
-		--NotExists(varname) returns true of the variable does NOT exists in the list, false if it does
-		grouping=simple_dialogs.func_splitter(line,"NOTEXISTS",1)
-		line=simple_dialogs.does_var_exist(npcself,grouping,"NOT",line)
+
 	end --if npcself
 	--minetest.log("simple_dialogs->pf bot line="..line)
 	return line
@@ -1190,11 +1201,11 @@ end --in_list
 
 
 function simple_dialogs.does_var_exist(npcself,grouping,isornot,line)
+	--minetest.log("simple_dialogs->dve vars="..dump(npcself.dialog.vars))
 	if grouping then
 		for g=1,#grouping.list,1 do
 			local var=grouping.list[g].parm[1]  --populate_vars should always already have happened
-			local rtn="0"
-			if simple_dialogs.dialog_var_exists(npcself,var) then rtn="1" end
+			local rtn=simple_dialogs.dialog_var_exists(npcself,var)
 			if isornot=="NOT" then
 				if rtn=="0" then rtn="1" else rtn="0" end 
 			end --if isornot
