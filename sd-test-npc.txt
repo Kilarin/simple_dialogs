@@ -1,26 +1,49 @@
 ===start
-Hello @[playername]@, this is a test conversation.
-Chose a reply to test various aspects of simple dialogs
->npcvars:Test variables set by the npc mod that implements simple_dialogs
->setvars:I'd like to test setting variables
->iftest:using :If to set things conditionaly based on variables values
->weight:multiple possible outcomes (weighted tags)
->errors:Test to see if we can make simple_dialogs crash?
->gototest:Various tests of GOTO
+start is just used to set up some variables
 :set angry=Y
 :set FriendList=|superman|spiderman|batman|wonderwoman|
-angry and friendlist are set here, but are not used here.  They are used elsewhere.
-Note that these lines are ignored by simple_dialogs because they are not a command or a reply,
-and they cant be part of the dialog since it comes after the first reply.
+:if (notexists(npcname)) then set npcname=NPC
+:set brackets1=@[brackets
+:set brackets2=]@
+:set brackets=@[brackets1]@@[brackets2]@
+:set ranvartest=
+:set rannpcvars=
+:set ransetvars=
+:set raniftest=
+:set ranbasiciftest=
+:set ranifgoto=
+:goto begin
+
+
+===Begin
+Hello @[playername]@, this is a test conversation.
+Chose a reply to test various aspects of simple dialogs
+:if ((@[rannpcvars]@==*) and (@[ransetvars]@==*)) then set ranvartest=*
+:if ((@[ranbasiciftest]@==*) and (@[ranifgoto]@==*)) then set raniftest=*
+>vartest:@[ranvartest]@ Test variables @[playername]@
+>iftest:@[raniftest]@ Test :If to set things conditionaly based on variables values
+>weight:multiple possible outcomes (weighted topics)
+>errors:Test to see if we can make simple_dialogs crash?
+>gototest:Various tests of GOTO
+
+------------------------------------------------
+
+===vartest
+There are several variable functionalities to test.
+Select from below to step through the list
+>npcvars:@[rannpcvars]@ Test Variables set in the calling mod
+>setvars:@[ransetvars]@ Test setting variables within the dialog itself
+>begin:Back to the begining
+>End
 
 ===npcvars
 The below variables are set in TenPlus1 MOBS REDO.  A different implementation may not have these variables or may have different ones.
-
 My name is @[npcname]@, and my owner is @[owner]@
 my hunger is @[food]@, my state is @[state]@, and my health is @[health]@
->start:Back to the start
->setvars:I'd like to test setting variables
->iftest:using :If to set things conditionaly based on variables values
+:set rannpcvars=*
+>setvars:@[ransetvars]@ Test setting variables within the dialog itself
+>begin:Back to the begining
+>End
 
 ===setvars
 This conversation tests setting variables within the dialog itself
@@ -33,84 +56,102 @@ Are you on my Friend List? @[FriendList]@
 The variable friendlist2 was set to the same as list, but batman was removed with the rmv function
 friendlist2=@[friendlist2]@
 
-the variable angry was set in a different tag, but can still be displayed here because variables live for as long as the npc lives.
+the variable angry was set in a different topic, but can still be displayed here because variables live for as long as the npc lives.
 Am I angry? @[angry]@
+:set ransetvars=*
 :set location=mountaains
 :set FriendList=add(FriendList,@[playername]@)
 :set FriendList2=rmv(FriendList,batman)
->start:Back to the start
->npcvars:Test variables set by the npc mod that implements simple_dialogs
->iftest:using :If to set things conditionaly based on variables values
+>begin:Back to the begining
+>End
+
+--------------------------------------------
 
 ===iftest
-This dialog illustrates using the command :if
+the :if command allows you to operate any other command (primarily set or goto) based on conditions
+Remember when using it that ALL conditions must be enclosed in parenthesis
+and that variables should be in @[brackets]@ if you want them replaces with their values
+>basiciftest:@[ranbasiciftest]@ Test setting variables using :if
+>ifgoto:@[ranifgoto]@ Test using if to goto another topic
+>begin:Back to the begining
+>End
+
+===basiciftest
+This dialog illustrates using the command :if to set variables
 
 am I angry right now? @[angry]@
 The below "mood" line is based on the status of angry
 @[mood]@
 
 My friendlist is @[friendlist]@
+Are you in my friendlist? YesNo(isinlist(FriendList,@[playername]@))
+
 The below line changes based on both angry AND whether the player is in friendlist
+
 And what do I think about you? @[friendstatus]@
+
 :set mood=I guess I'm just in a good mood
 :if (@[angry]@==Y) then set mood=I'm in a lousy mood today
 :if ( (@[angry]@==N) and (isinlist(FriendList,@[playername]@)) ) then set friendstatus=You are my very best friend!
 :if ( (@[angry]@==N) and (isinlist(FriendList,@[playername]@)==0) ) then set friendstatus=Hmmm, I don't really know you.
 :if ( (@[angry]@==Y) and (isinlist(FriendList,@[playername]@)) ) then set friendstatus=Some friend YOU are
 :if ( (@[angry]@==Y) and (isinlist(FriendList,@[playername]@)==0) ) then set friendstatus=I HATE you!
->angry:Make them angry!
->happy:Make them not angry.
->addplayer:Add player to friend list
->rmvplayer:Remove player from friend list
->ifgoto:Test if goto
->start:Back to the start
->npcvars:Test variables set by the npc mod that implements simple_dialogs
->setvars:I'd like to test setting variables
+:set ranbasiciftest=*
+
+>angry:Make @[npcname]@ angry!
+>happy:Make @[npcname]@ not angry.
+>addplayer:Add @[playername]@ to friend list
+>rmvplayer:Remove @[playername]@ from friend list
+>ifgoto:@[ranifgoto]@ Test using if to goto another topic
+>begin:Back to the begining
+>End
 
 
 ===angry
 Ohhh!  That makes me so ANGRY!  angry=@[angry]@
 :set angry=Y
->iftest:back to using :If to set things conditionaly based on variables values
+>basiciftest:back to Test setting variables using :if
 
 ===happy
 Well, that was nice of you, I feel much better now!  angry=@[angry]@
 :set angry=N
->iftest:back to using :If to set things conditionaly based on variables values
+>basiciftest:back to Test setting variables using :if
 
 ===addplayer
 Well, I guess I'll just put your name in my little black book as a friend.
 :set FriendList=add(FriendList,@[playername]@)
->iftest:back to using :If to set things conditionaly based on variables values
+>basiciftest:back to Test setting variables using :if
 
 ===rmvplayer
 I am erasing your name from my little black book!  You are no longer my friend!
 :set FriendList=rmv(FriendList,@[playername]@)
->iftest:back to using :If to set things conditionaly based on variables values
+>basiciftest:back to Test setting variables using :if
 
 
 ===ifgoto
 From here you can test the :if goto command.
 My friendlist is @[friendlist]@
-When you select the reply "Where did you bury the treasure" below, it will take you to the tag treasuremap.
-if playername is on the friendlist, you will stay at the treasuremap tag.
-BUT, if playername is NOT on the friendlist, you will be taken to the "enemy" tag.
+Are you in my friendlist? YesNo(isinlist(FriendList,@[playername]@))
+
+When you select the reply "Where did you bury the treasure" below, it will take you to the topic treasuremap.
+if playername is on the friendlist, you will stay at the treasuremap topic.
+BUT, if playername is NOT on the friendlist, you will be taken to the "enemy" topic.
 >treasuremap:Where did you bury the treasure?
 >addplayer2:Add player to friend list
 >rmvplayer2:Remove player from friend list
->ifgoto:Test if goto
->start:Back to the start
+>begin:Back to the begining
+>End
 
 ===TreasureMap
 Shiver me Timbers, that be a bold request!  But, seeing how you are my friend, I suppose I can let you in on the secret.
-:if (isinlist(FriendList,@[playername]@)) then goto enemy
+:set ranifgoto=*
+:if (notinlist(FriendList,@[playername]@)) then goto enemy
 >ifgoto:back to testing if with goto
->start:Back to the start
 
 ===Enemy
 Keep your grubby paws off of me booty ye lily-livered, feculent, sorry sea dog!
+:set ranifgoto=*
 >ifgoto:back to testing if with goto
->start:Back to the start
 
 ===addplayer2
 Well, I guess I'll just put your name in my little black book as a friend.
@@ -122,11 +163,14 @@ I am erasing your name from my little black book!  You are no longer my friend!
 :set FriendList=rmv(FriendList,@[playername]@)
 >ifgoto:back to testing if with goto
 
+----------------------------------------
+
+
 ===weight
-Its possible to have multiple tags with the same name.  When you do, simple dialogs will choose randomly between them.
-So, for example, this test npc has 2 tags for "puppy" and 3 tags "treasure"
-The two tags for puppy do not have a weight, so if you select puppy below, there is a 50/50 chance of you getting either response.
-BUT, the three tags for "treasure" are weighted.  That means the tags have a number after them like this:
+Its possible to have multiple topics with the same name.  When you do, simple dialogs will choose randomly between them.
+So, for example, this test npc has 2 topics for "puppy" and 3 topics "treasure"
+The two topics for puppy do not have a weight, so if you select puppy below, there is a 50/50 chance of you getting either response.
+BUT, the three topics for "treasure" are weighted.  That means the topics have a number after them like this:
   ==treasure(1)
   ==treasure(3)
   ==treasure(5)
@@ -138,35 +182,35 @@ Try it below.
 ===puppy
 The puppy shivers from tip of his nose all the way back to the tip of his tail and gives one sharp bark of pure joy.
 >puppy:Pet the puppy again!
->weight:Back to the multiple possible outcomes (weighted tags)
->start:Back to the very beginning.
+>weight:Back to the multiple possible outcomes (weighted topics)
+>begin:Back to the begining
 
 ===puppy
 The puppy wags his tail and then runs around you in a circle, coming back to right in front of you, where it sits and waits anxiously for another petting!
 >puppy:How can I resist?  I pet the puppy again of course!
->weight:Back to the multiple possible outcomes (weighted tags)
->start:Back to the very beginning.
+>weight:Back to the multiple possible outcomes (weighted topics)
+>begin:Back to the begining
 
 ===treasure(1)
 Well, hmmm.  Why not, you seem like a nice person @[playername]@.  I WILL give you the treasure map!
 (this is the entry with treasure(1) you will only see it about 1 out of 9 times)
 >treasure:That is GREAT, now hand that map over!
->weight:Back to the multiple possible outcomes (weighted tags)
->start:Back to the very beginning.
+>weight:Back to the multiple possible outcomes (weighted topics)
+>begin:Back to the begining
 
 ===treasure(3)
 I don't think so.  That treasure is nothing but trouble.  I'm not just going to hand it over to some landlubber who will just get themselves lost looking for it.
 (this is the entry with treasure(3) you will see it about 3 out of 9 times)
 >treasure:Will you give me the treasure if I ask PRETTY PLEASE?, With Sugar On Top?
->weight:Back to the multiple possible outcomes (weighted tags)
->start:Back to the very beginning.
+>weight:Back to the multiple possible outcomes (weighted topics)
+>begin:Back to the begining
 
 ===treasure(5)
 Nope, not a chance.  It's MY treasure, you will never get your grubby paws on it!
 (this is the entry with treasure(5) you will see it about 5 out of 9 times, by far most often)
 >treasure:I said give me the treasure map!
->weight:Back to the multiple possible outcomes (weighted tags)
->start:Back to the very beginning.
+>weight:Back to the multiple possible outcomes (weighted topics)
+>begin:Back to the begining
 
 ===errors
 This dialog's purpose it to try everything I can think of to make simple_dialogs crash.
@@ -199,45 +243,45 @@ All of this should be ignored and none of it should cause a crash
 :if (@[doesnotexist]@==flaming@[doesnotexist]@@[var2]@@[var5]@ calc(3/0)) then
 :if () then set x=3
 :if then
->tagwithnoreplies:test if a tag with no replies will crash
->tagwithnodialog:test if a tag with no dialog will crash
->doesnotexist:test if a reply target pointing at a tag that does not exist will crash.
->start:Back to the very beginning.
+>topicwithnoreplies:test if a topic with no replies will crash
+>topicwithnodialog:test if a topic with no dialog will crash
+>doesnotexist:test if a reply target pointing at a topic that does not exist will crash.
+>begin:Back to the begining
 
-===tagwithnoreplies
-What happens if you have a tag with no replies?
+===topicwithnoreplies
+What happens if you have a topic with no replies?
 (an END reply is automagically added)
 
-===tagwithnodialog
+===topicwithnodialog
 >errors:back to primary error dialog
->start:Back to the very beginning.
+>begin:Back to the begining
 
 ===gototest
 This is a simple test of goto, you should not see this screen
->end
+>End
 :goto someplaceelse
 
 ===someplaceelse
 This is someplace else.  Whenever you go to gototest, it has a goto that takes you here.  So you never actually see gototest
->start:back to the begining
+>begin:Back to the begining
 >gototest:back to the first gototest dialog, which will take you back here.
 >gotoloop1:test a goto loop
->end
+>End
 
 ===gotoloop1
 This is gotoloop1, it goes to gotoloop2 (which goes to gotoloop1)
 This will NOT form an enternal loop because simple_dialogs will automatically break out of the loop
 :goto gotoloop2
->start:back to the begining
+>begin:Back to the begining
 >gototest:back to the first gototest dialog, which will take you back here.
 >gotoloop1:test a goto loop
->end
+>End
 
 ===gotoloop2
 this is gotoloop2, it goes to gotoloop1 (which goes to gotoloop2)
 This will NOT form an enternal loop because simple_dialogs will automatically break out of the loop
 :goto gotoloop1
->start:back to the begining
+>begin:Back to the begining
 >gototest:back to the first gototest dialog, which will take you back here.
 >gotoloop1:test a goto loop
->end
+>End
