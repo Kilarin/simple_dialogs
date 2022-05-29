@@ -62,6 +62,7 @@ And what do I think about you? @[friendstatus]@
 >happy:Make them not angry.
 >addplayer:Add player to friend list
 >rmvplayer:Remove player from friend list
+>ifgoto:Test if goto
 >start:Back to the start
 >npcvars:Test variables set by the npc mod that implements simple_dialogs
 >setvars:I'd like to test setting variables
@@ -86,6 +87,40 @@ Well, I guess I'll just put your name in my little black book as a friend.
 I am erasing your name from my little black book!  You are no longer my friend!
 :set FriendList=rmv(FriendList,@[playername]@)
 >iftest:back to using :If to set things conditionaly based on variables values
+
+
+===ifgoto
+From here you can test the :if goto command.
+My friendlist is @[friendlist]@
+When you select the reply "Where did you bury the treasure" below, it will take you to the tag treasuremap.
+if playername is on the friendlist, you will stay at the treasuremap tag.
+BUT, if playername is NOT on the friendlist, you will be taken to the "enemy" tag.
+>treasuremap:Where did you bury the treasure?
+>addplayer2:Add player to friend list
+>rmvplayer2:Remove player from friend list
+>ifgoto:Test if goto
+>start:Back to the start
+
+===TreasureMap
+Shiver me Timbers, that be a bold request!  But, seeing how you are my friend, I suppose I can let you in on the secret.
+:if (isinlist(FriendList,@[playername]@)) then goto enemy
+>ifgoto:back to testing if with goto
+>start:Back to the start
+
+===Enemy
+Keep your grubby paws off of me booty ye lily-livered, feculent, sorry sea dog!
+>ifgoto:back to testing if with goto
+>start:Back to the start
+
+===addplayer2
+Well, I guess I'll just put your name in my little black book as a friend.
+:set FriendList=add(FriendList,@[playername]@)
+>ifgoto:back to testing if with goto
+
+===rmvplayer2
+I am erasing your name from my little black book!  You are no longer my friend!
+:set FriendList=rmv(FriendList,@[playername]@)
+>ifgoto:back to testing if with goto
 
 ===weight
 Its possible to have multiple tags with the same name.  When you do, simple dialogs will choose randomly between them.

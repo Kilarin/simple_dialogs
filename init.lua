@@ -255,35 +255,21 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr)
 	
 	--loop through each line in the string (including blank lines) 
 	for line in (dialogstr..'\n'):gmatch'(.-)\r?\n' do 
-		--minetest.log("simple_dialogs->ldfs line="..line)
+		--minetest.log("simple_dialogs->ldfs line="..wk.line)
 		wk.line=line
 		local firstchar=string.sub(wk.line,1,1)
-
+		--minetest.log("simple_dialogs->ldfs firstchar="..firstchar.." #firstchar="..#firstchar)
 		if firstchar == chars.tag then  --we found a tag, process it
 			simple_dialogs.load_dialog_tag(wk)
 		elseif firstchar == chars.reply and wk.tag ~= "" then  --we found a reply, process it
 			simple_dialogs.load_dialog_reply(wk)
-		elseif firstchar==":" then --commands
-			local spc=string.find(wk.line," ",2)
-			if spc then
-				local cmnd=string.upper(string.sub(wk.line,2,spc-1))
-				local str=string.sub(wk.line,spc+1) --rest of line without the command				
-				--minetest.log("simple_dialogs->ldfs c="..c.." cmnd="..cmnd.." str="..str)
-				if cmnd=="SET" then
-					--minetest.log("simple_dialogs->ldfs cmnd=set")
-					local cmndx=simple_dialogs.load_dialog_cmnd_set(str)
-					local cmndcount=#wk.dlg[wk.tag][wk.subtag].cmnd+1
-					if cmndx then wk.dlg[wk.tag][wk.subtag].cmnd[cmndcount]=cmndx end
-				elseif cmnd=="IF" then
-					simple_dialogs.load_dialog_cmnd_if(wk,str)
-				elseif cmnd=="GOTO" then
-					local cmndx={}
-					cmndx.cmnd="GOTO"
-					cmndx.tag=simple_dialogs.tag_filter(str)
-					local cmndcount=#wk.dlg[wk.tag][wk.subtag].cmnd+1
-					wk.dlg[wk.tag][wk.subtag].cmnd[cmndcount]=cmndx
-				end --if IF
-			end --if spc
+		elseif firstchar==":" and #wk.line>1 then --commands
+			--minetest.log("simple_dialogs->ldfs : line="..wk.line)
+			local newcmnd=simple_dialogs.load_dialog_cmnd(string.sub(wk.line,2))
+			if newcmnd then
+				local cmndcount=#wk.dlg[wk.tag][wk.subtag].cmnd+1
+				wk.dlg[wk.tag][wk.subtag].cmnd[cmndcount]=newcmnd 
+			end --if newcmnd
 		--we check that a tag is set to avoid errors, just in case they put text before the first tag
 		--we check that replycount=0 because we are going to ignore any text between the replies and the next tag
 		elseif wk.tag~="" and #wk.dlg[wk.tag][wk.subtag].reply==0 then  --we found a dialog line, process it
@@ -370,12 +356,40 @@ function simple_dialogs.load_dialog_reply(wk)
 end --load_dialog_reply
 
 
+
+--this will create a command from the dialog input string, ready to be loaded into the dialog input table.
+--it is called by both load_dialog_from_string and also by load_dialog_cmnd_if (to load ifcmnd)
+--do not pass in the leading colon
+function simple_dialogs.load_dialog_cmnd(line)
+	--minetest.log("simple_dialogs->ldc line="..line)
+	local newcmnd=nil
+	local spc=string.find(line," ",1)
+	if spc then
+		local cmndname=string.upper(string.sub(line,1,spc-1))
+		local str=string.sub(line,spc+1) --rest of line without the command
+		--minetest.log("simple_dialogs->ldc cmnd="..cmndname.." str="..str)
+		if cmndname=="SET" then
+			newcmnd=simple_dialogs.load_dialog_cmnd_set(str)
+		elseif cmndname=="IF" then
+			newcmnd=simple_dialogs.load_dialog_cmnd_if(str)
+		elseif cmndname=="GOTO" then
+			newcmnd={}
+			newcmnd.cmnd="GOTO"
+			newcmnd.tag=simple_dialogs.tag_filter(str)
+		end --if IF
+	end --if spc
+	--minetest.log("simple_dialogs->ldc newcmnd="..dump(newcmnd))
+	return newcmnd
+end --load_dialog_cmnd
+
+
 --this function is used to load a SET cmnd into the dialog table in load_dialog_from_string and in load_dialog_if
 --str is the string after the :set and should be in the format of varname=varval
---note that this works a bit differently than the other load_dialog functions.
---it returns a table cmnd.  That way this can be used not only for primary set commands,
---but also for if subcommands
-function simple_dialogs.load_dialog_cmnd_set(str)  --pass dlg[tag][subtag].cmnd[#
+--returns a cmnd in format of:
+--cmnd.cmnd="SET"
+--cmnd.varname=variablename
+--cmnd.varval=value to set variable to
+function simple_dialogs.load_dialog_cmnd_set(str)  
 	local cmnd=nil
 	local eq=string.find(str,"=")
 	if eq then
@@ -397,37 +411,29 @@ end --load_dialog_cmnd_set
 
 
 --this function is used to load an IF cmnd into the dialog table in load_dialog_from_string 
---wk is our working area variables.
 --str is the string after the :if
 --if must have all if conditions enclosed in one paren group, even single condition must be in parens
 --if (condition) then 
 --if ((condition) and (condition) or (condition)) then 
-function simple_dialogs.load_dialog_cmnd_if(wk,str)
-	--minetest.log("simple_dialogs->ldci top")
+--yes, this has a recursive call to load_dialog_cmnd.  It should NOT cause problems because it can
+--only be built from the string that was passed in.  there is no way to fall into an infinate recursive loop.
+--function simple_dialogs.load_dialog_cmnd_if(wk,str)
+function simple_dialogs.load_dialog_cmnd_if(str)
+	--minetest.log("simple_dialogs->ldci top str="..str)
+	local cmnd=nil
 	local grouping=simple_dialogs.build_grouping_list(str,"(",")")
 	if grouping.first>0 then --find " THEN " after the last close paren
 		local t=string.find(string.upper(str)," THEN ",grouping.list[grouping.first].close)
 		if t then
 			--minetest.log("simple_dialogs->ldci t="..t)
-			local cmndx={}
-			cmndx.cmnd="IF"
-			cmndx.condstr=string.sub(str,1,t-1)
-			local thenstr=simple_dialogs.trim(string.sub(str,t+6)) --trim ensures no leading spaces
-			local spc=string.find(thenstr," ")
-			if spc then
-				local subcmnd=string.upper(string.sub(thenstr,1,spc-1))
-				if subcmnd=="SET" then
-					local ifcmnd=simple_dialogs.load_dialog_cmnd_set(string.sub(thenstr,spc+1))
-					if ifcmnd then
-						cmndx.ifcmnd=ifcmnd
-						local cmndcount=#wk.dlg[wk.tag][wk.subtag].cmnd+1
-						wk.dlg[wk.tag][wk.subtag].cmnd[cmndcount]=cmndx
-					end --if ifcmnd
-				end --if subcmnd=set
-			end --if spc
+			cmnd={}
+			cmnd.cmnd="IF"
+			cmnd.condstr=string.sub(str,1,t-1)
+			local thenstr=simple_dialogs.trim(string.sub(str,t+6)) --trim ensures no leading spaces			
+			cmnd.ifcmnd=simple_dialogs.load_dialog_cmnd(thenstr)
 		end --if t
 	end --if grouping.first
-	--minetest.log("simple_dialogs->ldci bot dlg["..wk.tag.."]["..wk.subtag.."].cmnd["..c.."]="..dump(wk.dlg[wk.tag][wk.subtag].cmnd[c]))
+	return cmnd
 end --load_dialog_cmnd_if
 
 
@@ -444,6 +450,7 @@ convert Dialog table into a formspec
 --then this function calls dialog_to_formspec_inner AGAIN with the new tag.
 --if gototag>=4 then we ignore it.  This prevents any possibility of an eternal loop
 function simple_dialogs.dialog_to_formspec(pname,npcself,tag)
+	--minetest.log("simple_dialogs->dtf top npcself.dialog="..dump(npcself.dialog))
 	--first we make certain everything is properly defined.  if there is an error we do NOT want to crash
 	--but we do return an error message that might help debug.
 	local errlabel="label[0.375,0.5; ERROR in dialog_to_formspec, "
@@ -622,6 +629,7 @@ function simple_dialogs.execute_cmnd_if(npcself,cmnd)
 		--	simple_dialogs.execute_cmnd_set(npcself,cmnd.ifcmnd)
 		--end --ifcmnd SET
 		--if the if condition was met, then we execute the ifcmnd, which can be any command
+		--minetest.log("simple_dialogs->eci executing ifcmnd "..dump(cmnd))
 		simple_dialogs.execute_cmnd(npcself,cmnd.ifcmnd)
 
 	end --ifrst
