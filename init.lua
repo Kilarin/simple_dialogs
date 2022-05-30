@@ -1199,10 +1199,10 @@ function simple_dialogs.populate_funcs(npcself,line,playername)
 		end --if grouping RMV
 		--ISINLIST  isinlist(variable,stringtolookfor)  returns 1(true) or 0(false)
 		grouping=simple_dialogs.func_splitter(line,"ISINLIST",2)
-		line=simple_dialogs.in_list(npcself,grouping,"IS",line)
+		line=simple_dialogs.in_list(npcself,grouping,"IS",line,playername)
 		--NOTINLIST NotInList(variable,stringtolookfor) returns 1 if not in the list, 0 if it is in the list
 		grouping=simple_dialogs.func_splitter(line,"NOTINLIST",2)
-		line=simple_dialogs.in_list(npcself,grouping,"NOT",line)
+		line=simple_dialogs.in_list(npcself,grouping,"NOT",line,playername)
 		--NotExists(varname) returns true of the variable does NOT exists in the list, false if it does
 		grouping=simple_dialogs.func_splitter(line,"NOTEXISTS",1)
 		line=simple_dialogs.does_var_exist(npcself,grouping,"NOT",line)
@@ -1229,7 +1229,7 @@ end --populate_funcs
 
 
 --extracted because we need to call the same logic for 
-function simple_dialogs.in_list(npcself,grouping,isornot,line)
+function simple_dialogs.in_list(npcself,grouping,isornot,line,playername)
 	if grouping then
 		--minetest.log("simple_dialogs-> il grouping)
 		for g=1,#grouping.list,1 do
