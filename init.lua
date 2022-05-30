@@ -389,7 +389,7 @@ function simple_dialogs.load_dialog_cmnd(line)
 			newcmnd={}
 			newcmnd.cmnd="HOOK"
 			local spc2=string.find(str," ",1)
-			minetest.log("simple_dialogs->ldc hook str="..str.." spc2="..spc2)
+			--minetest.log("simple_dialogs->ldc hook str="..str.." spc2="..spc2)
 			if spc2 then
 				newcmnd.func=string.upper(string.sub(str,1,spc2-1))
 				newcmnd.str=simple_dialogs.trim(string.sub(str,spc2+1))
@@ -402,7 +402,7 @@ function simple_dialogs.load_dialog_cmnd(line)
 				end
 			newcmnd.parmcount=c
 			end --if spc2
-			minetest.log("simple_dialogs->ldc hook="..dump(newcmnd))
+			--minetest.log("simple_dialogs->ldc hook="..dump(newcmnd))
 		end --if cmndname
 	end --if spc
 	--minetest.log("simple_dialogs->ldc newcmnd="..dump(newcmnd))
@@ -499,7 +499,7 @@ function simple_dialogs.dialog_to_formspec(playername,npcself,topic)
 		end 
 		--minetest.log("simple_dialogs->dtf before")
 		formspec=simple_dialogs.dialog_to_formspec_inner(playername,npcself)
-		minetest.log("simple_dialogs->dtf after gototopic="..dump(gototopic))
+		--minetest.log("simple_dialogs->dtf after gototopic="..dump(gototopic))
 		until not gototopic.topic
 	return formspec
 end
@@ -523,7 +523,7 @@ this means we can just roll a random number between 1 and 13,
 then select the first subtopic for which our random number is less than or equal to its weight.
 --]]
 function simple_dialogs.dialog_to_formspec_inner(playername,npcself)
-	minetest.log("simple_dialogs->dtf playername="..playername)
+	--minetest.log("simple_dialogs->dtf playername="..playername)
 	--minetest.log("simple_dialogs->dtf: npcself="..dump(npcself))
 
 	
@@ -532,8 +532,8 @@ function simple_dialogs.dialog_to_formspec_inner(playername,npcself)
 
 	npcself.dialog.gototopic.topic=nil --will be set again if we hit a goto
 	
-	--add playername to variables IF it was passed in
-	if playername then simple_dialogs.save_dialog_var(npcself,"PLAYERNAME",playername) end
+	--add playername to variables IF it was passed in TODO: remove these after testing
+	--if playername then simple_dialogs.save_dialog_var(npcself,"PLAYERNAME",playername) end
 	--load any variables from calling mod
 	for f=1,#registered_varloaders do
 		registered_varloaders[f](npcself,playername)
@@ -568,14 +568,14 @@ function simple_dialogs.dialog_to_formspec_inner(playername,npcself)
 		--minetest.log("simple_dialogs->dtf c="..c.." cmnd="..dump(dlg[topic][subtopic].cmnd[c]))
 		simple_dialogs.execute_cmnd(npcself,dlg[topic][subtopic].cmnd[c],playername)
 		if npcself.dialog.gototopic.topic then 
-			minetest.log("simple_dialogs->dtfi topic set:"..npcself.dialog.gototopic.topic)
+			--minetest.log("simple_dialogs->dtfi topic set:"..npcself.dialog.gototopic.topic)
 			return "" 
 		end
 	end --for c
 	--
 	--populate the say portion of the dialog, that is simple.
 	local say=dlg[topic][subtopic].say
-	say=simple_dialogs.populate_vars_and_funcs(npcself,say)
+	say=simple_dialogs.populate_vars_and_funcs(npcself,say,playername)
 	if not say then say="" end
 	--
 	--now get the replylist
@@ -584,7 +584,7 @@ function simple_dialogs.dialog_to_formspec_inner(playername,npcself)
 		if r>1 then replies=replies.."," end
 		local rply=dlg[topic][subtopic].reply[r].text
 		--minetest.log("simple_dialogs->dtfsi reply rply bfr="..rply)
-		rply=simple_dialogs.populate_vars_and_funcs(npcself,rply)
+		rply=simple_dialogs.populate_vars_and_funcs(npcself,rply,playername)
 		--minetest.log("simple_dialogs->dtfsi reply rply aft="..rply)
 		--if string.len(rply)>70 then rply=string.sub(rply,1,70)..string.char(10)..string.sub(rply,71) end  tried wrapping, it doesn't work well.
 		replies=replies..minetest.formspec_escape(rply)
@@ -616,9 +616,9 @@ function simple_dialogs.execute_cmnd(npcself,cmnd,playername)
 	if cmnd then
 		if cmnd.cmnd=="SET" then
 			--minetest.log("simple_dialogs ec set cmnd="..dump(cmnd))
-			simple_dialogs.save_dialog_var(npcself,cmnd.varname,cmnd.varval)  --load the variable (varname filtering and populating vars happens inside this method)
+			simple_dialogs.save_dialog_var(npcself,cmnd.varname,cmnd.varval,playername)  --load the variable (varname filtering and populating vars happens inside this method)
 		elseif cmnd.cmnd=="IF" then
-			simple_dialogs.execute_cmnd_if(npcself,cmnd)
+			simple_dialogs.execute_cmnd_if(npcself,cmnd,playername)
 		elseif cmnd.cmnd=="GOTO" then
 			local gototopic=npcself.dialog.gototopic
 			gototopic.count=gototopic.count+1
@@ -628,10 +628,10 @@ function simple_dialogs.execute_cmnd(npcself,cmnd,playername)
 				return ""
 			end --if gototopic.count
 		elseif cmnd.cmnd=="HOOK" then
-			minetest.log("simple_dialogs->ec hook")
+			--minetest.log("simple_dialogs->ec hook")
 			for f=1,#registered_varloaders do
 				local rtn=registered_hooks[f](npcself,playername,cmnd)
-				minetest.log("simple_dialogs->ec hook rtn="..dump(rtn))
+				--minetest.log("simple_dialogs->ec hook rtn="..dump(rtn))
 				if rtn and rtn=="EXIT" then
 					npcself.dialog.gototopic.topic="END"
 					return ""
@@ -653,10 +653,10 @@ end --execute_cmnd
 --yes, this makes a recursive call, the ifcmnd can even be another if statement.
 --BUT, there should be no danger of infinite recursion, because the cmnd structure can NOT be altered during processing.
 --so there will always be a finite depth to the recursion.
-function simple_dialogs.execute_cmnd_if(npcself,cmnd)
+function simple_dialogs.execute_cmnd_if(npcself,cmnd,playername)  
 	--minetest.log("simple_dialogs->eci if cmnd="..dump(cmnd))
 	--first thing, populate any vars and run any functions in the condition string
-	local condstr=simple_dialogs.populate_vars_and_funcs(npcself,cmnd.condstr)
+	local condstr=simple_dialogs.populate_vars_and_funcs(npcself,cmnd.condstr,playername)
 	--minetest.log("simple_dialogs->eci condstr="..condstr)
 	local ifgrouping=simple_dialogs.build_grouping_list(condstr,"(",")")
 	for i=1,#ifgrouping.list,1 do
@@ -683,9 +683,9 @@ function simple_dialogs.execute_cmnd_if(npcself,cmnd)
 		--	simple_dialogs.execute_cmnd_set(npcself,cmnd.ifcmnd)
 		--end --ifcmnd SET
 		--if the if condition was met, then we execute the ifcmnd, which can be any command
-		minetest.log("simple_dialogs->eci executing ifcmnd "..dump(cmnd))
-		simple_dialogs.execute_cmnd(npcself,cmnd.ifcmnd)
-		minetest.log("simple_dialogs->eci back from ifcmnd")
+		--minetest.log("simple_dialogs->eci executing ifcmnd "..dump(cmnd))
+		simple_dialogs.execute_cmnd(npcself,cmnd.ifcmnd,playername)
+		--minetest.log("simple_dialogs->eci back from ifcmnd")
 	end --ifrst
 end --execute_cmnd_if
 
@@ -798,14 +798,14 @@ end --dialog_help
 
 
 
-function simple_dialogs.save_dialog_var(npcself,varname,varval)
+function simple_dialogs.save_dialog_var(npcself,varname,varval,playername)  --TODO:playername
 	if npcself and varname then
 		if not npcself.dialog.vars then npcself.dialog.vars = {} end
 		if not varval then varval="" end
 		--minetest.log("simple_dialogs->---sdv bfr varname="..varname.." varval="..varval)
-		varname=simple_dialogs.populate_vars_and_funcs(npcself,varname)  --populate vars
+		varname=simple_dialogs.populate_vars_and_funcs(npcself,varname,playername)  --populate vars
 		varname=simple_dialogs.varname_filter(varname)  --filter down to only allowed chars
-		varval=simple_dialogs.populate_vars_and_funcs(npcself,varval)  --populate vars
+		varval=simple_dialogs.populate_vars_and_funcs(npcself,varval,playername)  --populate vars
 		--minetest.log("simple_dialogs->sdv aft varname="..varname.." varval="..varval)
 		npcself.dialog.vars[varname] = varval  --add to variable list
 		--minetest.log("simple_dialogs->sdv end npcself.dialog.vars="..dump(npcself.dialog.vars))
@@ -813,15 +813,18 @@ function simple_dialogs.save_dialog_var(npcself,varname,varval)
 end --save_dialog_var
 
 
-function simple_dialogs.get_dialog_var(npcself,varname,defaultval)
+function simple_dialogs.get_dialog_var(npcself,varname,playername,defaultval)
 	if npcself and varname then
 		if not defaultval then defaultval="" end
 		if not npcself.dialog.vars then npcself.dialog.vars = {} end
 		--minetest.log("simple_dialogs->---gdv bfr varname="..varname)
-		--varname=simple_dialogs.populate_vars_and_funcs(npcself,varname)  --populate vars  should already be done???
 		varname=simple_dialogs.varname_filter(varname)  --filter down to only allowed chars, no need for trim since spaces are not allowed
 		--minetest.log("simple_dialogs->---gdv aft varname="..varname)
-		if npcself.dialog.vars[varname] then return npcself.dialog.vars[varname]
+		if varname=="PLAYERNAME" then
+			--playername must be dealt with differently.  we can not just store it as a variable because 
+			--If two players spoke to the same npc at the same time, one would overwrite the others playername
+			return playername 
+		elseif npcself.dialog.vars[varname] then return npcself.dialog.vars[varname]
 		else return defaultval
 		end
 	end
@@ -832,7 +835,8 @@ function simple_dialogs.dialog_var_exists(npcself,varname)
 	if npcself and varname then
 		if not npcself.dialog.vars then npcself.dialog.vars = {} end
 		varname=simple_dialogs.varname_filter(varname)  --filter down to only allowed chars, no need for trim since spaces are not allowed
-		if npcself.dialog.vars[varname] then 
+		--playername always exists, it is not stored in dialog.vars
+		if varname=="PlAYERNAME" or npcself.dialog.vars[varname] then 
 			return "1"
 		else return "0"
 		end
@@ -1119,17 +1123,16 @@ end --calc_filter
 
 --this function populates variables
 --do not call this directly, use populate_vars_and_funcs instead
-function simple_dialogs.populate_vars(npcself,line)
+function simple_dialogs.populate_vars(npcself,line,playername)
 	if npcself and npcself.dialog.vars then
 		local grouping=simple_dialogs.build_grouping_list(line,chars.varopen,chars.varclose)
 		--minetest.log("CCC vars="..dump(npcself.dialog.vars))
 		for i=1,#grouping.list,1 do
 			--local gli=grouping.list[i]
 			--minetest.log("CCC beforesectione i="..i.." grouping="..dump(grouping))
-			local k=simple_dialogs.grouping_section(grouping,i,"EXCLUSIVE") --get section from string
-			--local k=simple_dialogs.varname_filter(sectione)  --k is our key value
-			--minetest.log("CCC i="..i.." sectione="..sectione.." k="..k)
-			line=simple_dialogs.grouping_replace(grouping,i,simple_dialogs.get_dialog_var(npcself,k),"INCLUSIVE")
+			local varname=simple_dialogs.grouping_section(grouping,i,"EXCLUSIVE") --get variable name
+			--minetest.log("CCC i="..i.." sectione="..sectione.." varname="..varname)
+			line=simple_dialogs.grouping_replace(grouping,i,simple_dialogs.get_dialog_var(npcself,varname,playername),"INCLUSIVE")
 		end --for
 	end --if
 	return line
@@ -1146,7 +1149,7 @@ end --populate_vars
 --Exists(varname)       returns true of the variable exists in the list, false otherwise
 --NotExists(varname)    returns true of the variable does NOT exists in the list, false if it does
 --YesNo(func())         convert 0 or N into No and 1 or Y into Yes (for display purposes)  (Do not use direcly in if as it does not return 0 or 1)
-function simple_dialogs.populate_funcs(npcself,line)
+function simple_dialogs.populate_funcs(npcself,line,playername)  
 	--minetest.log("simple_dialogs->pf top line="..line)
 	if npcself and npcself.dialog.vars and line then
 		--CALC   calc(math)
@@ -1171,7 +1174,7 @@ function simple_dialogs.populate_funcs(npcself,line)
 				local value=grouping.list[g].parm[2]
 				--minetest.log("simple_dialogs->pf var="..var.." value="..value)
 				--: simple_dialogs->pf var=dd(list value=singleplayer
-				local list=simple_dialogs.get_dialog_var(npcself,var,"|")
+				local list=simple_dialogs.get_dialog_var(npcself,var,playername,"|")
 				if string.sub(list,-1)~="|" then list=list.."|" end --must always end in |
 				--minetest.log("simple_dialogs->dialog.vars="..dump(npcself.dialog.vars))
 				--minetest.log("simple_dialogs->bfradd list="..list) 
@@ -1188,7 +1191,7 @@ function simple_dialogs.populate_funcs(npcself,line)
 			for g=1,#grouping.list,1 do
 				local var=grouping.list[g].parm[1]  --populate_vars should always already have happened
 				local value=grouping.list[g].parm[2]
-				local list=simple_dialogs.get_dialog_var(npcself,var)
+				local list=simple_dialogs.get_dialog_var(npcself,var,playername)
 				--minetest.log("simple_dialogs->pf rmv list="..list.."<")
 				list=string.gsub(list,"|"..value.."|","|")
 				line=simple_dialogs.grouping_replace(grouping,g,list,"INCLUSIVE")
@@ -1232,7 +1235,7 @@ function simple_dialogs.in_list(npcself,grouping,isornot,line)
 		for g=1,#grouping.list,1 do
 			local var=grouping.list[g].parm[1]  --populate_vars should always already have happened
 			local lookfor=grouping.list[g].parm[2]
-			local list=simple_dialogs.get_dialog_var(npcself,var)
+			local list=simple_dialogs.get_dialog_var(npcself,var,playername)
 			local rtn="0"
 			if string.find(list,"|"..lookfor.."|") then rtn="1" end  --using string, numbers cause problems sometimes
 			if isornot=="NOT" then
@@ -1263,10 +1266,10 @@ end --doesitexist
 
 --this function combines populate_vars and populate_funcs
 --the others should never be called directly, use this one.
-function simple_dialogs.populate_vars_and_funcs(npcself,line)
-	if npcself and line then
-		line=simple_dialogs.populate_vars(npcself,line)
-		line=simple_dialogs.populate_funcs(npcself,line)
+function simple_dialogs.populate_vars_and_funcs(npcself,line,playername)
+	if npcself and line and playername then
+		line=simple_dialogs.populate_vars(npcself,line,playername)
+		line=simple_dialogs.populate_funcs(npcself,line,playername)  --TODO playername
 	end
 	return line
 end --populate_vars_and_funcs
@@ -1294,7 +1297,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		if contextctr[playername] then contextctr[playername]=nil end
 		return 
 	end
-	--minetest.log("simple_dialogs->recieve controls: fields="..dump(fields))
+	--minetest.log("simple_dialogs->receive controls: fields="..dump(fields))
 	local npcId=contextctr[playername] --get the npc id from local context
 	local npcself=nil
 	if not npcId then return --exit if npc id was not set 
@@ -1320,7 +1323,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		or not contextdlg[playername].topic 
 		or not contextdlg[playername].subtopic 
 		then 
-			minetest.log("simpleDialogs->recieve_fields dialog: ERROR in dialog receive_fields: context not properly set")
+			minetest.log("simple_dialogs->receive_fields dialog: ERROR in dialog receive_fields: context not properly set")
 			return 
 	end
 	local npcId=contextdlg[playername].npcId --get the npc id from local context
