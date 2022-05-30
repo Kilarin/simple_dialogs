@@ -86,17 +86,17 @@ end
 
 --this creates and displays an independent dialog control formspec
 --dont use this if you are trying to integrate dialog controls with another formspec
-function simple_dialogs.show_dialog_controls_formspec(pname,npcself)
-	contextctr[pname]=simple_dialogs.set_npc_id(npcself) --store the npc id in local context so we can use it when the form is returned.  (cant store self)
+function simple_dialogs.show_dialog_controls_formspec(playername,npcself)
+	contextctr[playername]=simple_dialogs.set_npc_id(npcself) --store the npc id in local context so we can use it when the form is returned.  (cant store self)
 	-- Make blank formspec
 	local formspec = {
 		"formspec_version[4]",
 		"size[15,7]", 
 		}
 	--add the dialog controls to the above blank formspec
-	simple_dialogs.add_dialog_control_to_formspec(pname,npcself,formspec,0.375,0.375)
+	simple_dialogs.add_dialog_control_to_formspec(playername,npcself,formspec,0.375,0.375)
 	formspec=table.concat(formspec, "")
-	minetest.show_formspec(pname, "simple_dialogs:dialog_controls", formspec )
+	minetest.show_formspec(playername, "simple_dialogs:dialog_controls", formspec )
 end --show_dialog_controls_formspec
 
 
@@ -106,7 +106,7 @@ end --show_dialog_controls_formspec
 --register_on_player_receive_fields function for the formspec to process the buttons when pushed
 --I THINK this should work if your formspec is a string instead of a table, but I haven't tested that yet.
 --TODO: allow control of width?
-function simple_dialogs.add_dialog_control_to_formspec(pname,npcself,formspec,x,y)
+function simple_dialogs.add_dialog_control_to_formspec(playername,npcself,formspec,x,y)
 	local dialogtext=""
 	if npcself.dialog and npcself.dialog.text then dialogtext=npcself.dialog.text end
 	local x2=x
@@ -133,14 +133,14 @@ end --add_dialog_control_to_formspec
 --if you used add_dialog_control_to_formspec to add the dialog controls to an existing formspec,
 --then use THIS in your register_on_player_receive_fields function
 --it will process the save, saveandtest and dialog help buttons.
-function simple_dialogs.process_simple_dialog_control_fields(pname,npcself,fields)
+function simple_dialogs.process_simple_dialog_control_fields(playername,npcself,fields)
 	if fields["save"] or fields["saveandtest"] then
 		simple_dialogs.load_dialog_from_string(npcself,fields["dialog"])
 	end --save or saveandtest
 	if fields["saveandtest"] then
-		simple_dialogs.show_dialog_formspec(pname,npcself,"START")
+		simple_dialogs.show_dialog_formspec(playername,npcself,"START")
 	elseif fields["dialog help"] then
-		simple_dialogs.dialog_help(pname)
+		simple_dialogs.dialog_help(playername)
 	end
 end --process_simple_dialog_control_fields
 
@@ -166,12 +166,12 @@ end --load_dialog_from_file
 --this will be used to display the actual dialog to a player interacting with the npc
 --normally displayed to someone who is NOT the entity owner
 --call with topic=START for starting a dialog, or with no topic and it will default to start.
-function simple_dialogs.show_dialog_formspec(pname,npcself,topic)
+function simple_dialogs.show_dialog_formspec(playername,npcself,topic)
 	--only show the dialog formspec if there is a dialog
 	if npcself and npcself.dialog and npcself.dialog.dlg and npcself.dialog.text and npcself.dialog.text~="" then 
 		if not topic then topic="START" end
-		contextdlg[pname]={}
-		contextdlg[pname].npcId=simple_dialogs.set_npc_id(npcself) --store the npc id in local context so we can use it when the form is returned.  (cant store self)
+		contextdlg[playername]={}
+		contextdlg[playername].npcId=simple_dialogs.set_npc_id(npcself) --store the npc id in local context so we can use it when the form is returned.  (cant store self)
 		local formspec={
 			"formspec_version[4]",
 			"size[28,15]", 
@@ -180,10 +180,10 @@ function simple_dialogs.show_dialog_formspec(pname,npcself,topic)
 			"no_prepend[]",        --must be present for below transparent setting to work
 			"bgcolor[;neither;]",  --make the formspec background transparent
 			"box[0.370,0.4;9.6,8.4;#222222FF]", --draws a box background behind our text area
-			simple_dialogs.dialog_to_formspec(pname,npcself,topic)
+			simple_dialogs.dialog_to_formspec(playername,npcself,topic)
 		}
 		formspec=table.concat(formspec,"")
-		minetest.show_formspec(pname,"simple_dialogs:dialog",formspec)
+		minetest.show_formspec(playername,"simple_dialogs:dialog",formspec)
 	end
 end --show_dialog_formspec
 
@@ -373,7 +373,8 @@ function simple_dialogs.load_dialog_cmnd(line)
 	local spc=string.find(line," ",1)
 	if spc then
 		local cmndname=string.upper(string.sub(line,1,spc-1))
-		local str=string.sub(line,spc+1) --rest of line without the command
+		local str=simple_dialogs.trim(string.sub(line,spc+1)) --rest of line without the command
+		if not str then str="" end
 		--minetest.log("simple_dialogs->ldc cmnd="..cmndname.." str="..str)
 		if cmndname=="SET" then
 			newcmnd=simple_dialogs.load_dialog_cmnd_set(str)
@@ -383,7 +384,26 @@ function simple_dialogs.load_dialog_cmnd(line)
 			newcmnd={}
 			newcmnd.cmnd="GOTO"
 			newcmnd.topic=simple_dialogs.topic_filter(str)
-		end --if IF
+		elseif cmndname=="HOOK" then
+			--:hook teleport -500,3,-80
+			newcmnd={}
+			newcmnd.cmnd="HOOK"
+			local spc2=string.find(str," ",1)
+			minetest.log("simple_dialogs->ldc hook str="..str.." spc2="..spc2)
+			if spc2 then
+				newcmnd.func=string.upper(string.sub(str,1,spc2-1))
+				newcmnd.str=simple_dialogs.trim(string.sub(str,spc2+1))
+				newcmnd.parm={}
+				local c=0
+				--now break the rest of the command into parms, if possible
+				for word in string.gmatch(newcmnd.str, '([^,]+)') do
+					c=c+1
+					newcmnd.parm[c]=word
+				end
+			newcmnd.parmcount=c
+			end --if spc2
+			minetest.log("simple_dialogs->ldc hook="..dump(newcmnd))
+		end --if cmndname
 	end --if spc
 	--minetest.log("simple_dialogs->ldc newcmnd="..dump(newcmnd))
 	return newcmnd
@@ -456,7 +476,7 @@ convert Dialog table into a formspec
 --and if gototopic.count<4 it sets gototopic.topic and returns.
 --then this function calls dialog_to_formspec_inner AGAIN with the new topic.
 --if gototopic>=4 then we ignore it.  This prevents any possibility of an eternal loop
-function simple_dialogs.dialog_to_formspec(pname,npcself,topic)
+function simple_dialogs.dialog_to_formspec(playername,npcself,topic)
 	--minetest.log("simple_dialogs->dtf top npcself.dialog="..dump(npcself.dialog))
 	--first we make certain everything is properly defined.  if there is an error we do NOT want to crash
 	--but we do return an error message that might help debug.
@@ -472,10 +492,14 @@ function simple_dialogs.dialog_to_formspec(pname,npcself,topic)
 	local formspec
 	repeat
 		--this check has to be inside the repeat to catch topics changed by goto
-		if not npcself.dialog.dlg[topic] then return errlabel.. " topic "..topic.." not found in the dialog]" end 
+		if gototopic.topic and gototopic.topic=="END" then 
+			minetest.close_formspec(playername, "simple_dialogs:dialog")
+			return ""
+		elseif not npcself.dialog.dlg[topic] then return errlabel.. " topic "..topic.." not found in the dialog]" 
+		end 
 		--minetest.log("simple_dialogs->dtf before")
-		formspec=simple_dialogs.dialog_to_formspec_inner(pname,npcself)
-		--minetest.log("simple_dialogs->dtf after gototopic="..dump(gototopic))
+		formspec=simple_dialogs.dialog_to_formspec_inner(playername,npcself)
+		minetest.log("simple_dialogs->dtf after gototopic="..dump(gototopic))
 		until not gototopic.topic
 	return formspec
 end
@@ -498,8 +522,8 @@ dlg[Treasure][3].weight=13   (6+7=13)
 this means we can just roll a random number between 1 and 13,
 then select the first subtopic for which our random number is less than or equal to its weight.
 --]]
-function simple_dialogs.dialog_to_formspec_inner(pname,npcself)
-	--minetest.log("simple_dialogs->dtf pname="..pname.." topic="..topic)
+function simple_dialogs.dialog_to_formspec_inner(playername,npcself)
+	minetest.log("simple_dialogs->dtf playername="..playername)
 	--minetest.log("simple_dialogs->dtf: npcself="..dump(npcself))
 
 	
@@ -509,10 +533,10 @@ function simple_dialogs.dialog_to_formspec_inner(pname,npcself)
 	npcself.dialog.gototopic.topic=nil --will be set again if we hit a goto
 	
 	--add playername to variables IF it was passed in
-	if pname then simple_dialogs.save_dialog_var(npcself,"PLAYERNAME",pname) end
+	if playername then simple_dialogs.save_dialog_var(npcself,"PLAYERNAME",playername) end
 	--load any variables from calling mod
 	for f=1,#registered_varloaders do
-		registered_varloaders[f](npcself,pname)
+		registered_varloaders[f](npcself,playername)
 	end
 
 	local formspec={}
@@ -542,7 +566,11 @@ function simple_dialogs.dialog_to_formspec_inner(pname,npcself)
 	--minetest.log("simple_dialogs->dtf dlg["..topic.."]["..subtopic.."]="..dump(dlg[topic][subtopic]))
 	for c=1,#dlg[topic][subtopic].cmnd do
 		--minetest.log("simple_dialogs->dtf c="..c.." cmnd="..dump(dlg[topic][subtopic].cmnd[c]))
-		simple_dialogs.execute_cmnd(npcself,dlg[topic][subtopic].cmnd[c])
+		simple_dialogs.execute_cmnd(npcself,dlg[topic][subtopic].cmnd[c],playername)
+		if npcself.dialog.gototopic.topic then 
+			minetest.log("simple_dialogs->dtfi topic set:"..npcself.dialog.gototopic.topic)
+			return "" 
+		end
 	end --for c
 	--
 	--populate the say portion of the dialog, that is simple.
@@ -572,8 +600,8 @@ function simple_dialogs.dialog_to_formspec_inner(pname,npcself)
 		"textlist["..x2..","..y2..";27,5;reply;"..replies.."]"  --note that replies were escaped as they were added
 	}
 	--store the topic and subtopic in context as well
-	contextdlg[pname].topic=topic
-	contextdlg[pname].subtopic=subtopic
+	contextdlg[playername].topic=topic
+	contextdlg[playername].subtopic=subtopic
 	return table.concat(formspec,"")
 end --dialog_to_formspec
 
@@ -582,7 +610,7 @@ end --dialog_to_formspec
 --this is called from dialog_to_formspec, but it is ALSO called recursively on if, 
 --because if the if condition is met, we then execute the ifcmnd
 --for the structure of each cmnd table, check the documentation on load_dialog_from_string
-function simple_dialogs.execute_cmnd(npcself,cmnd)
+function simple_dialogs.execute_cmnd(npcself,cmnd,playername)
 	--minetest.log("simple_dialogs->ec cmnd="..dump(cmnd))
 	--local dlg=npcself.dialog.dlg
 	if cmnd then
@@ -599,7 +627,17 @@ function simple_dialogs.execute_cmnd(npcself,cmnd)
 				gototopic.topic=cmnd.topic
 				return ""
 			end --if gototopic.count
-		end --if cmnd=
+		elseif cmnd.cmnd=="HOOK" then
+			minetest.log("simple_dialogs->ec hook")
+			for f=1,#registered_varloaders do
+				local rtn=registered_hooks[f](npcself,playername,cmnd)
+				minetest.log("simple_dialogs->ec hook rtn="..dump(rtn))
+				if rtn and rtn=="EXIT" then
+					npcself.dialog.gototopic.topic="END"
+					return ""
+				end --if rtn
+			end --for
+		end --if cmnd.cmnd=
 	end --if cmnd exists
 end --execute_cmnd
 
@@ -645,9 +683,9 @@ function simple_dialogs.execute_cmnd_if(npcself,cmnd)
 		--	simple_dialogs.execute_cmnd_set(npcself,cmnd.ifcmnd)
 		--end --ifcmnd SET
 		--if the if condition was met, then we execute the ifcmnd, which can be any command
-		--minetest.log("simple_dialogs->eci executing ifcmnd "..dump(cmnd))
+		minetest.log("simple_dialogs->eci executing ifcmnd "..dump(cmnd))
 		simple_dialogs.execute_cmnd(npcself,cmnd.ifcmnd)
-
+		minetest.log("simple_dialogs->eci back from ifcmnd")
 	end --ifrst
 end --execute_cmnd_if
 
@@ -738,7 +776,7 @@ end --find operator
 
 --this displays the help text
 --I need a way to deal with this by language
-function simple_dialogs.dialog_help(pname)
+function simple_dialogs.dialog_help(playername)
 	--local file = io.open(minetest.get_modpath("simple_dialogs").."/simple_dialogs_help.txt", "r")
 	local file = io.open(helpfile, "r")
 	if file then
@@ -750,7 +788,7 @@ function simple_dialogs.dialog_help(pname)
 		"size[15,15]", 
 		"textarea[0.375,0.35;14,14;;help;"..minetest.formspec_escape(helpstr).."]"
 		}
-		minetest.show_formspec(pname,"simple_dialogs:dialoghelp",table.concat(formspec))
+		minetest.show_formspec(playername,"simple_dialogs:dialoghelp",table.concat(formspec))
 	else
 		minetest.log("simple_dialogs->dialoghelp: ERROR unable to find simple_dialogs_help.txt in modpath")
 	end 
@@ -1251,45 +1289,45 @@ end)--register_on_leaveplayer
 --this will only work if you use show_dialog_control_formspec.  If you have integrated the dialog controls 
 --into another formspec you will have to call process_simple_dialog_control_fields from your own player receive fields function
 minetest.register_on_player_receive_fields(function(player, formname, fields)
-	local pname = player:get_player_name()
+	local playername = player:get_player_name()
 	if formname ~= "simple_dialogs:dialog_controls" then 
-		if contextctr[pname] then contextctr[pname]=nil end
+		if contextctr[playername] then contextctr[playername]=nil end
 		return 
 	end
 	--minetest.log("simple_dialogs->recieve controls: fields="..dump(fields))
-	local npcId=contextctr[pname] --get the npc id from local context
+	local npcId=contextctr[playername] --get the npc id from local context
 	local npcself=nil
 	if not npcId then return --exit if npc id was not set 
 	else npcself=simple_dialogs.get_npcself_from_id(npcId)  --try to find the npcId in the list of luaentities
 	end
 	if npcself ~= nil then
-		simple_dialogs.process_simple_dialog_control_fields(pname,npcself,fields)
+		simple_dialogs.process_simple_dialog_control_fields(playername,npcself,fields)
 	end --if npcself not nil
 end) --register_on_player_receive_fields dialog_controls
 
 
 --this handles returned fields for the regular dialog formspec
 minetest.register_on_player_receive_fields(function(player, formname, fields)
-	local pname = player:get_player_name()
+	local playername = player:get_player_name()
 	if formname ~= "simple_dialogs:dialog" then
 		--can NOT clear context here because this can be called from inside the control panel, 
 		--and that can be from a DIFFERENT mod where I cannot predict the name
 		return 
 	end
 	--minetest.log("simple_dialogs->receive_fields dialog: fields="..dump(fields))
-	if   not contextdlg[pname] 
-		or not contextdlg[pname].npcId 
-		or not contextdlg[pname].topic 
-		or not contextdlg[pname].subtopic 
+	if   not contextdlg[playername] 
+		or not contextdlg[playername].npcId 
+		or not contextdlg[playername].topic 
+		or not contextdlg[playername].subtopic 
 		then 
 			minetest.log("simpleDialogs->recieve_fields dialog: ERROR in dialog receive_fields: context not properly set")
 			return 
 	end
-	local npcId=contextdlg[pname].npcId --get the npc id from local context
+	local npcId=contextdlg[playername].npcId --get the npc id from local context
 	local npcself=nil
 	npcself=simple_dialogs.get_npcself_from_id(npcId)  --try to find the npcId in the list of luaentities
-	local topic=contextdlg[pname].topic
-	local subtopic=contextdlg[pname].subtopic
+	local topic=contextdlg[playername].topic
+	local subtopic=contextdlg[playername].subtopic
 	--minetest.log("simple_dialogs->receive_fields dialog: topic="..topic.." subtopic="..subtopic.." npcId="..npcId)
 	--minetest.log("simple_dialogs->receive_fields dialog: npcself="..dump(npcself))
 	if   not npcself
@@ -1305,12 +1343,12 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	if fields["reply"] then 
 		--minetest.log("simple_dialogs->sss got back reply!"..dump(fields["reply"]))
 		local r=tonumber(string.sub(fields["reply"],5))
-		if npcself.dialog.dlg[topic][subtopic].reply[r].target == "END" then
-			minetest.close_formspec(pname, "simple_dialogs:dialog")
-		else
+		--if npcself.dialog.dlg[topic][subtopic].reply[r].target == "END" then
+		--	minetest.close_formspec(playername, "simple_dialogs:dialog")
+		--else
 			local newtopic=npcself.dialog.dlg[topic][subtopic].reply[r].target
-			 simple_dialogs.show_dialog_formspec(pname,npcself,newtopic)
-		end
+			 simple_dialogs.show_dialog_formspec(playername,npcself,newtopic)
+		--end
 	end
 end) --register_on_player_receive_fields dialog
 

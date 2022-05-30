@@ -18,7 +18,40 @@ if (minetest.get_modpath("simple_dialogs")) then
 		simple_dialogs.save_dialog_var(npcself,"FOOD",npcself.food)
 		simple_dialogs.save_dialog_var(npcself,"HEALTH",npcself.food)
 		simple_dialogs.save_dialog_var(npcself,"owner",npcself.owner)
-	end)--register_on_leaveplayer
+	end)--register_varloader
+
+	simple_dialogs.register_hook(function(npcself,playername,hook)
+		if hook.func=="TELEPORT" then
+			minetest.log("XXX teleport")
+			if npcself.owner then
+				minetest.log("XXX owner")
+				--check to see if the player has teleport privliges
+				local player_privs = minetest.get_player_privs(npcself.owner)
+				if player_privs["teleport"] then
+					minetest.log("XXX privs")
+					--validate x,y,z coords
+					if hook.parm and hook.parmcount and hook.parmcount>2 then
+						minetest.log("XXX parms")
+						local pos={}
+						pos.x=tonumber(hook.parm[1])
+						pos.y=tonumber(hook.parm[2])
+						pos.z=tonumber(hook.parm[3])
+						if pos.x and pos.y and pos.z and
+							pos.x>-31500 and pos.x<31500 and 
+							pos.y>-31500 and pos.y<31500 and
+							pos.z>-31500 and pos.z<31500 then
+							minetest.log("xxx numbers")
+							local player = minetest.get_player_by_name(playername)
+							if player then 
+								minetest.log("XXX player pos.x="..pos.x.." y="..pos.y.." z="..pos.z)
+								player:set_pos(pos) end
+						end --if tonumber
+					end --if hook.parm
+				end --if player_privs
+			end --if npcself.owner
+		return "EXIT"
+		end --if hook.func
+	end)--register_hook
 end --if simple_dialogs
 
 mobs.npc_drops = {
@@ -101,8 +134,7 @@ mobs:register_mob("mobs_npc:npc", {
 		local item = clicker:get_wielded_item()
 		local name = clicker:get_player_name()
 
-		-- right clicking with tin_lump changes name
-		--TODO: remove this, it was for testing purposes only
+		-- right clicking with tin_lump changes owner TODO: this is for testing, REMOVE
 		if item:get_name() == "default:tin_lump" then
 			self.owner="notyou"
 		end

@@ -3,9 +3,8 @@ start is just used to set up some variables
 :set angry=Y
 :set FriendList=|superman|spiderman|batman|wonderwoman|
 :if (notexists(npcname)) then set npcname=NPC
-:set brackets1=@[brackets
+:set brackets1=@[
 :set brackets2=]@
-:set brackets=@[brackets1]@@[brackets2]@
 :set ranvartest=
 :set rannpcvars=
 :set ransetvars=
@@ -42,6 +41,7 @@ Chose a reply to test various aspects of simple dialogs
 >weight:@[ranweight]@ Test multiple possible outcomes (weighted topics)
 >gototest:@[rangoto]@ Test GOTO functionality
 >functions:@[ranfunctions]@ Test functions
+>hooks:Test Hooks
 >errors:@[ranerrors]@ Test to see if we can make simple_dialogs crash?
 
 --------------------------------------------
@@ -86,9 +86,7 @@ Am I angry? yesno(@[angry]@)
 --------------------------------------------
 
 ===iftest
-the :if command allows you to operate any other command (primarily set or goto) based on conditions
-Remember when using it that ALL conditions must be enclosed in parenthesis
-and that variables should be in @[brackets]@ if you want them replaced with their values
+the :if command allows you to operate any other command (set, goto, or hook) based on conditions.  Remember when using it that ALL conditions must be enclosed in parenthesis and that variables should be in @[brackets1]@brackets@[brackets2]@ if you want them replaced with their values
 >basiciftest:@[ranbasiciftest]@ Test setting variables using :if
 >ifgoto:@[ranifgoto]@ Test using if to goto another topic
 >begin:Back to the begining
@@ -106,8 +104,7 @@ Are you in my friendlist? YesNo(isinlist(FriendList,@[playername]@))
 
 The below line changes based on both angry AND whether the player is in friendlist
 
-And what do I think about you? @[friendstatus]@
-angry=@[angry]@<
+And what do I think about you? *** @[friendstatus]@ ***
 
 :set mood=I guess I'm just in a good mood
 :if (@[angry]@==Y) then set mood=I'm in a lousy mood today
@@ -301,18 +298,33 @@ notexists (nosuchvar)=notexists(nosuchvar)
 yesno (isinlist (petlist,cat))=yesno(isinlist(petlist,cat))
 yesno (isinlist (petlist,hippo))=yesno(isinlist(petlist,hippo))
 calc (2*(12/4)+1)=calc(2*(12/4)+1)
-calc (@[gold3]@*2)=calc(@[gold]@*2)
+calc (@[brackets1]@gold@[bracktes2]@*2)=calc(@[gold]@*2)
 :set petlist=|dog|cat|mouse|parakeet|
 :set gold=42
-:set gold1=@[gold
-:set gold2=]@
-:set gold3=@[gold1]@@[gold2]@
 :set ranfunctions=*
 >begin:Back to the begining
 >End
 note that on the left I put a space between the function name and the open paren so it wont be processed as a function.
-also you will see the bizzare gold3 variable which is a way to trick simple_dialogs into displaying @[gold]@ without
+also you will see the bizzare gold variable which is a way to trick simple_dialogs into displaying @[gold]@ without
 interpreting the variable.  (I need escape logic!)
+
+--------------------------------------------
+
+===hooks
+Hooks are ways for you to call more advanced functionality from a dialog that goes beyond conversation with the npc.
+For example, this test uses a hook that allows an npc who's owner has the teleport priv, to teleport people.
+Hooks are called from simple_dialogs, but they are run in the entity mod, and security around hooks is entirely the responsibility of the entity mod.  For example, the example telepor hook in mods redo checks to see if the npc owner has teleport privs before it executes the teleport.
+Test below:
+>teleport:teleport to -500,3,-80
+>begin:Back to the begining
+>End
+--- -496,3,-82
+
+===teleport
+You shouldn't see this screen because you teleport from here.
+:hook teleport -500,3,-80
+>End
+
 
 --------------------------------------------
 
@@ -326,7 +338,7 @@ variables that are not closed correctly @[badvariable@
 nested bad variables will not crash, @[nested@[badvariable]@]@ @[nested@[friendlist]@]@
 nor will recursive variable attempts @[var1]@ @[@[var3]@]@ @[var2]@ @[var4]@@[var5]@
 
-below we will also have a bad command, empty set and bad set
+below we will also have a bad command, empty set, bad set, and strange spacing in sets (var9 should equal 12: var9=@[var9]@<)
 and some bad if statements
 All of this should be ignored and none of it should cause a crash
 :set var1=var2
@@ -341,6 +353,7 @@ All of this should be ignored and none of it should cause a crash
 :set @[var6]@=calc(3/0)
 :set var7=@[doesnotexist]@
 :set var8=calc(isinlist()
+:set  var9   = 12
 :if
 :if (@[var5]@>=x) then set
 :if (@[var5]@<=x)
