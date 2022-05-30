@@ -13,25 +13,21 @@ local useDialogs="N"
 if (minetest.get_modpath("simple_dialogs")) then 
 	useDialogs="Y" 
 	simple_dialogs.register_varloader(function(npcself,playername)
-		simple_dialogs.save_dialog_var(npcself,"NPCNAME",npcself.nametag)
-		simple_dialogs.save_dialog_var(npcself,"STATE",npcself.state)
-		simple_dialogs.save_dialog_var(npcself,"FOOD",npcself.food)
-		simple_dialogs.save_dialog_var(npcself,"HEALTH",npcself.food)
-		simple_dialogs.save_dialog_var(npcself,"owner",npcself.owner)
+		simple_dialogs.save_dialog_var(npcself,"NPCNAME",npcself.nametag,playername)
+		simple_dialogs.save_dialog_var(npcself,"STATE",npcself.state,playername)
+		simple_dialogs.save_dialog_var(npcself,"FOOD",npcself.food,playername)
+		simple_dialogs.save_dialog_var(npcself,"HEALTH",npcself.food,playername)
+		simple_dialogs.save_dialog_var(npcself,"owner",npcself.owner,playername)
 	end)--register_varloader
 
 	simple_dialogs.register_hook(function(npcself,playername,hook)
 		if hook.func=="TELEPORT" then
-			minetest.log("XXX teleport")
 			if npcself.owner then
-				minetest.log("XXX owner")
 				--check to see if the player has teleport privliges
 				local player_privs = minetest.get_player_privs(npcself.owner)
 				if player_privs["teleport"] then
-					minetest.log("XXX privs")
 					--validate x,y,z coords
 					if hook.parm and hook.parmcount and hook.parmcount>2 then
-						minetest.log("XXX parms")
 						local pos={}
 						pos.x=tonumber(hook.parm[1])
 						pos.y=tonumber(hook.parm[2])
@@ -40,10 +36,8 @@ if (minetest.get_modpath("simple_dialogs")) then
 							pos.x>-31500 and pos.x<31500 and 
 							pos.y>-31500 and pos.y<31500 and
 							pos.z>-31500 and pos.z<31500 then
-							minetest.log("xxx numbers")
 							local player = minetest.get_player_by_name(playername)
 							if player then 
-								minetest.log("XXX player pos.x="..pos.x.." y="..pos.y.." z="..pos.z)
 								player:set_pos(pos) end
 						end --if tonumber
 					end --if hook.parm
