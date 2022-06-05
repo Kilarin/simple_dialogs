@@ -458,6 +458,7 @@ function simple_dialogs.load_dialog_cmnd_if(str)
 			cmnd.condstr=string.sub(str,1,t-1)
 			local thenstr=simple_dialogs.trim(string.sub(str,t+6)) --trim ensures no leading spaces			
 			cmnd.ifcmnd=simple_dialogs.load_dialog_cmnd(thenstr)
+			--minetest.log("simple_dialogs->ldci cmnd="..dump(cmnd))
 		end --if t
 	end --if grouping.first
 	return cmnd
@@ -525,27 +526,19 @@ then select the first subtopic for which our random number is less than or equal
 function simple_dialogs.dialog_to_formspec_inner(playername,npcself)
 	--minetest.log("simple_dialogs->dtf playername="..playername)
 	--minetest.log("simple_dialogs->dtf: npcself="..dump(npcself))
-
-	
 	local dlg=npcself.dialog.dlg  --shortcut to make things more readable
 	local topic=npcself.dialog.gototopic.topic
-
 	npcself.dialog.gototopic.topic=nil --will be set again if we hit a goto
-	
-	--add playername to variables IF it was passed in TODO: remove these after testing
-	--if playername then simple_dialogs.save_dialog_var(npcself,"PLAYERNAME",playername) end
 	--load any variables from calling mod
 	for f=1,#registered_varloaders do
+		--minetest.log("simple_dialogs-> dtfi loading varloaders")
 		registered_varloaders[f](npcself,playername)
 	end
-
 	local formspec={}
-	
 	--how many matching topics (subtopics) are there  (for example, if there are 3 "TREASURE" topics)
 	local subtopicmax=#dlg[topic]
 	--get a random number between 1 and the max weight
 	local rnd=math.random(dlg[topic][subtopicmax].weight)
-	
 	--subtopic represents which topic was chosen when you had repeated topics
 	local subtopic=1
 	--we loop through all the matching topics and select the first one for which our random number
@@ -560,7 +553,7 @@ function simple_dialogs.dialog_to_formspec_inner(playername,npcself)
 	--now subtopic equals the selected subtopic
 	--minetest.log("simple_dialogs->dtf topic="..topic.." subtopic="..subtopic)
 	--minetest.log("simple_dialogs->dtf before formspec npcself.dialog="..dump(npcself.dialog))
-	
+	--
 	--very first, run any commands
 	--minetest.log("simple_dialogs->dtf topic="..topic.." subtopic="..subtopic)
 	--minetest.log("simple_dialogs->dtf dlg["..topic.."]["..subtopic.."]="..dump(dlg[topic][subtopic]))
@@ -590,7 +583,7 @@ function simple_dialogs.dialog_to_formspec_inner(playername,npcself)
 		replies=replies..minetest.formspec_escape(rply)
 		--minetest.log("simple_dialogs->dtfsi reply rply fnl="..rply)
 	end --for
-	
+	--
 	local x=0.45
 	local y=0.5
 	local x2=0.375
@@ -617,6 +610,7 @@ function simple_dialogs.execute_cmnd(npcself,cmnd,playername)
 		if cmnd.cmnd=="SET" then
 			--minetest.log("simple_dialogs ec set cmnd="..dump(cmnd))
 			simple_dialogs.save_dialog_var(npcself,cmnd.varname,cmnd.varval,playername)  --load the variable (varname filtering and populating vars happens inside this method)
+			--minetest.log("simple_dialogs ec set after vars="..dump(npcself.dialog.vars))
 		elseif cmnd.cmnd=="IF" then
 			simple_dialogs.execute_cmnd_if(npcself,cmnd,playername)
 		elseif cmnd.cmnd=="GOTO" then
@@ -658,6 +652,7 @@ function simple_dialogs.execute_cmnd_if(npcself,cmnd,playername)
 	--first thing, populate any vars and run any functions in the condition string
 	local condstr=simple_dialogs.populate_vars_and_funcs(npcself,cmnd.condstr,playername)
 	--minetest.log("simple_dialogs->eci condstr="..condstr)
+	--minetest.log("simple_dialogs->eci vars="..dump(npcself.dialog.vars))
 	local ifgrouping=simple_dialogs.build_grouping_list(condstr,"(",")")
 	for i=1,#ifgrouping.list,1 do
 		local condsection=simple_dialogs.grouping_section(ifgrouping,i,"EXCLUSIVE")  --one paren bounded section of condstr
@@ -798,7 +793,7 @@ end --dialog_help
 
 
 
-function simple_dialogs.save_dialog_var(npcself,varname,varval,playername)  --TODO:playername
+function simple_dialogs.save_dialog_var(npcself,varname,varval,playername)
 	if npcself and varname then
 		if not npcself.dialog.vars then npcself.dialog.vars = {} end
 		if not varval then varval="" end
@@ -829,23 +824,6 @@ function simple_dialogs.get_dialog_var(npcself,varname,playername,defaultval)
 		end
 	end
 end --get_dialog_var
-
-
-function simple_dialogs.dialog_var_exists(npcself,varname)
-	if npcself and varname then
-		if not npcself.dialog.vars then npcself.dialog.vars = {} end
-		varname=simple_dialogs.varname_filter(varname)  --filter down to only allowed chars, no need for trim since spaces are not allowed
-		--playername always exists, it is not stored in dialog.vars
-		if varname=="PlAYERNAME" or npcself.dialog.vars[varname] then 
-			return "1"
-		else return "0"
-		end
-	end
-	return "0" --shouldnt get here
-end --dialog_var_exists
-
---------------------------------------------------------------
-
 
 
 
@@ -1146,8 +1124,8 @@ end --populate_vars
 --rmv(variable,stringtoremove)
 --isinlist(variable,stringtolookfor)
 --NotInList(variable,stringtolookfor)
---Exists(varname)       returns true of the variable exists in the list, false otherwise
---NotExists(varname)    returns true of the variable does NOT exists in the list, false if it does
+--isSet(varname)       returns true of the variable exists in the list, and is not empty.  false otherwise
+--isNotSet(varname)    returns true of the variable does NOT exists in the list, or is empty, false if it does
 --YesNo(func())         convert 0 or N into No and 1 or Y into Yes (for display purposes)  (Do not use direcly in if as it does not return 0 or 1)
 function simple_dialogs.populate_funcs(npcself,line,playername)  
 	--minetest.log("simple_dialogs->pf top line="..line)
@@ -1203,12 +1181,12 @@ function simple_dialogs.populate_funcs(npcself,line,playername)
 		--NOTINLIST NotInList(variable,stringtolookfor) returns 1 if not in the list, 0 if it is in the list
 		grouping=simple_dialogs.func_splitter(line,"NOTINLIST",2)
 		line=simple_dialogs.in_list(npcself,grouping,"NOT",line,playername)
-		--NotExists(varname) returns true of the variable does NOT exists in the list, false if it does
-		grouping=simple_dialogs.func_splitter(line,"NOTEXISTS",1)
-		line=simple_dialogs.does_var_exist(npcself,grouping,"NOT",line)
-		--Exists(varname) returns true of the variable exists in the list, false otherwise
-		grouping=simple_dialogs.func_splitter(line,"EXISTS",1)
-		line=simple_dialogs.does_var_exist(npcself,grouping,"IS",line)
+		--isSet(varname) returns true if the variable exists in the list, and is not empty. false otherwise
+		grouping=simple_dialogs.func_splitter(line,"ISSET",1)
+		line=simple_dialogs.is_set(npcself,grouping,"IS",line)
+		--isNotSet(varname) returns true if the variable does NOT exist in the list, or is empty, false if it does
+		grouping=simple_dialogs.func_splitter(line,"ISNOTSET",1)
+		line=simple_dialogs.is_set(npcself,grouping,"NOT",line)
 		--YesNo(func())  YesNo turn 0 or N into No and 1 or Y into Yes (for display purposes)
 		--do NOT use YesNo in a :if!!!!
 		grouping=simple_dialogs.func_splitter(line,"YESNO",1)
@@ -1220,15 +1198,19 @@ function simple_dialogs.populate_funcs(npcself,line,playername)
 				if testchar=="1" or testchar=="Y" then rtn="Yes" end
 				line=simple_dialogs.grouping_replace(grouping,g,rtn,"INCLUSIVE")
 			end --for
-		end --if grouping YesNo
-
+		end --if grouping 
 	end --if npcself
 	--minetest.log("simple_dialogs->pf bot line="..line)
 	return line
 end --populate_funcs
 
 
---extracted because we need to call the same logic for 
+--this function executes the isinlist and notinlist functions
+--it checks to see if the value in parm[1] is in the list parm[2] 
+--the items in the list in parm[2] should be separated by vertical bars 
+--(and they will be if you used add and rmv to handle the list)
+--when parm isornot="NOT" the result is reversed.  (1=not inlist, 0=inlist)
+--the result returned is the line passed in with the function replaced by its result
 function simple_dialogs.in_list(npcself,grouping,isornot,line,playername)
 	if grouping then
 		--minetest.log("simple_dialogs-> il grouping)
@@ -1238,9 +1220,7 @@ function simple_dialogs.in_list(npcself,grouping,isornot,line,playername)
 			local list=simple_dialogs.get_dialog_var(npcself,var,playername)
 			local rtn="0"
 			if string.find(list,"|"..lookfor.."|") then rtn="1" end  --using string, numbers cause problems sometimes
-			if isornot=="NOT" then
-				if rtn=="0" then rtn="1" else rtn="0" end 
-			end --if isornot
+			rtn=is_or_not(rtn,isornot)
 			line=simple_dialogs.grouping_replace(grouping,g,rtn,"INCLUSIVE")
 		end --for
 	end --if grouping
@@ -1248,20 +1228,43 @@ function simple_dialogs.in_list(npcself,grouping,isornot,line,playername)
 end --in_list
 
 
-function simple_dialogs.does_var_exist(npcself,grouping,isornot,line)
-	--minetest.log("simple_dialogs->dve vars="..dump(npcself.dialog.vars))
+
+--this function executes the isset and isnotset functions.
+--it checks to see if the variable name (in parm[1]) is set
+--it counts a variable as set when it both exists, and is not empty
+--when parm isornot="NOT" the result is reversed.  (1=not set, 0=set)
+--the result returned is the line passed in with the function replaced by its result
+function simple_dialogs.is_set(npcself,grouping,isornot,line)
+	--minetest.log("simple_dialogs->is vars="..dump(npcself.dialog.vars))
 	if grouping then
 		for g=1,#grouping.list,1 do
-			local var=grouping.list[g].parm[1]  --populate_vars should always already have happened
-			local rtn=simple_dialogs.dialog_var_exists(npcself,var)
-			if isornot=="NOT" then
-				if rtn=="0" then rtn="1" else rtn="0" end 
-			end --if isornot
+			local varname=grouping.list[g].parm[1]  --populate_vars should always already have happened
+			local rtn="0"
+			if npcself and varname then
+				if not npcself.dialog.vars then npcself.dialog.vars = {} end
+				varname=simple_dialogs.varname_filter(varname)  --filter down to only allowed chars, no need for trim since spaces are not allowed
+				--playername always exists, it is not stored in dialog.vars
+				if varname=="PlAYERNAME" or (npcself.dialog.vars[varname] and npcself.dialog.vars[varname]~="") then 
+					rtn="1"
+				end
+			end
+			--minetest.log("simple_dialogs->is var="..varname.."< rtn="..rtn)
+			rtn=is_or_not(rtn,isornot)
 			line=simple_dialogs.grouping_replace(grouping,g,rtn,"INCLUSIVE")
 		end --for
-	end --if grouping YesNo
+	end --if grouping
 	return line
-end --doesitexist
+end --is_set
+
+--rtn passed in will be "1" (true) or "0" false.
+--if isornot="NOT" then rtn will be reversed
+function is_or_not(rtn,isornot)
+	if isornot=="NOT" then
+		if rtn=="0" then rtn="1" else rtn="0" end 
+	end --if isornot
+	return rtn
+end --is_or_not
+
 
 
 --this function combines populate_vars and populate_funcs
@@ -1269,7 +1272,7 @@ end --doesitexist
 function simple_dialogs.populate_vars_and_funcs(npcself,line,playername)
 	if npcself and line and playername then
 		line=simple_dialogs.populate_vars(npcself,line,playername)
-		line=simple_dialogs.populate_funcs(npcself,line,playername)  --TODO playername
+		line=simple_dialogs.populate_funcs(npcself,line,playername)
 	end
 	return line
 end --populate_vars_and_funcs

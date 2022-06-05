@@ -1,0 +1,72 @@
+===Start
+YOU SHALL NOT PASS!!!
+Oh, hello @[playername]@?  Nice to see you.  Uhm, but still,
+YOU SHALL NOT PASS!!!
+>why:So, exactly WHY can't I pass?
+>name:What is your name?
+>move:How about you just move aside and let me by?
+>ask:Oh, but surely that doesn't apply to ME, does it?  It's ok if *I* go by, isn't it?
+>bye:Good bye.
+
+
+===Why
+Errrmmm.  Well, Because I'm guarding this place.
+That's my job.  I guard.  I like the job, because I get to shout
+"YOU SHALL NOT PASS!!!"
+And if I'm really lucky, someone will resist, and then I get to stick them with my spear!
+>who:Who told you to stand guard here and shout that?
+>name:What is your name?
+>move:How about you just move aside and let me by?
+>ask:Oh, but surely that doesn't apply to ME, does it?  It's ok if *I* go by, isn't it?
+>bye:Good bye.
+
+
+===Who
+Well, that would be the assigner of shoutings and spear stickings.  Not that it's any of YOUR business!  Unless you are intending on resisting.  You wouldn't be thinking about resisting, would you?  Because I get to stick resisters with my spear.  I get to stick them, and then I get to shout at them.  It's the best of both worlds!
+>move:How about you just move aside and let me by?
+>bye:Never mind, I think I'll just move along.
+
+
+===Name
+My name?  Oh, uhm, just a second...
+happy birthday to me, happy birthday to me, happy birthday dear...
+Oh yeah, that's right!  My name is... wait, wait, I've lost it again.
+Oh well, doesn't matter.  My name is the name of the person who gets to shout
+"YOU SHALL NOT PASS!!!"
+>why:So, exactly WHY can't I pass?
+>move:How about you just move aside and let me by?
+>ask:Oh, but surely that doesn't apply to ME, does it?  It's ok if *I* go by, isn't it?
+>bye:Good bye.
+
+
+===Move
+Those words sound like resisting words.  You wouldn't be resisting would you?  Because
+"RESISTANCE IS USELESS!!!"
+And besides, I get to stick resisting people with my spear!  And that's kind of fun!
+>bye:Never mind, I think I'll just move along.
+>hippo:Oh, look over there, a purple hippo!!!
+
+
+===Ask
+You?  Well, I mean.  They didn't exactly give me a list of names.   I do know you.  You aren't planning on making any trouble on the other side, are you?  Nah, you wouldn't do that.  I guess it's ok, but do you mind if I shout at you one more time?  I REALLY like the shouting part of this job!
+>onemoreshout:Sure, thats fine, go ahead and shout!
+>Move:I'm really sick and tired of the shouting, to tell the truth.
+
+
+===One More Shout
+"YOU SHALL NOT PASS!!!!"
+Except, yeah, you kind of can.  Don't tell anyone I let you bye!
+>end:Good bye!
+
+
+===Hippo
+A purple Hippo?  Really, I've never seen a purple hippo before.  Where is it, over there?  Let me see!
+>end:good bye...
+
+
+===Bye
+"YOU SHALL NOT PASS!!!"  And, uhm, come back soon, will you?  It's kind of lonely out here, and its nice to have someone to shout at.  Remember: "RESISTANCE IS USELESS!"
+>end:Good bye!
+
+
+
