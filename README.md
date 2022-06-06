@@ -1,5 +1,5 @@
 # Simple_Dialogs for Minetest entities
-***version 0.1 ***
+*** version 0.1 ***
 ##### This mod allows you to add dialogs for npcs and other entities, controlled by an in game text file.
 
 ## License
@@ -28,7 +28,7 @@ What be ye doin here?  Arrrgh!  This be no fit place for land lubbers!
 >treasure:I'm looking for treasure.  Can you tell me where the treasure is?
 >rude:What's got you so cranky?  Did a beaver chew on your wooden leg?
 ```
-## TOPICS ##
+## TOPICS
 
 The dialog starts with a topic, a topic is any line that has an equal sign "=" in position one.  Every dialog file must have at least one START topic.
 Topics are not case sensitive, and any characters besides letters, digits, dashes, and underscores are removed.  Start, start, st art, and START will all be treated the same by simple dialogs.  This also means all equal symbols will be removed.  Every topic must start with one equal sign, I like three, I think it makes them stand out more, but it doesn't matter how many equal signs you have at the begining, as long as you have at least one, in position one.
@@ -36,7 +36,7 @@ You can also add a "weight" to a topic line if you wish, we will talk more about
 
 Following the topic will be the dialog you want the character to say.  This can be as long or as short as you wish.  Just don't start any lines with "=", ":", or ">" in position one.
 
-## REPLIES #
+## REPLIES
 
 After the dialog will come the replies.  Replies all start with a greater than sign ">" in position one.  Followed by a target, followed by a colon, then by the text of the reply.  The target is the dialog topic you want to go to next.
 
@@ -49,7 +49,7 @@ So in the above reply, the target is "name", and the display field is "What is y
 
 There is one special target, that is "end"  That does NOT go to another dialog topic, instead it closes the formspec and ends the conversation.
 
-## ADDING MORE TOPICS ##
+## ADDING MORE TOPICS
 
 Of course, every "target" in a reply must have a corresponding topic to go to.  So lets expand our dialog with another topic:
 
@@ -77,7 +77,7 @@ You keep adding sections until every possible path through the dialog has a dial
 It is very important that you do NOT have reply targets that do not actually match up with a dialog topic.  If you do, your dialog will not work.
 
 
-## WEIGHTED TOPICS ##
+## WEIGHTED TOPICS
 
 It is possible to have multiple topics with the same topic name.  When you do that, simple_dialogs will chose randomly which topic is shown.
 Example:
@@ -128,7 +128,7 @@ The dragon lives on the black mountain in the land of the elves.  As for how to 
 so, in the above example, the first "dragon" topic has a weight of 4, the second 3, and the last one 1.  When going to the dragon topic, simple_dialogs will roll a random number between 1 and 8 (4+3+1=8) If the number comes up 1-4, the first Dragon topic will show.  If it comes up 5-7, the second topic will show.  And only if the number comes up 8 will the last topic show.
 
 
-## VARIABLES ##
+## VARIABLES
 
 You can use variables in your dialogs.  Variables should be enclosed in at sign brackets, like this:
 @[playername]@
@@ -150,12 +150,12 @@ Hello @[playername]@.  I am the wizard Fladnag.  I forsaw that you would come to
 
 When the above dialog is displayed @[playername]@ will be replaced by the actual playername.
 
-## COMMANDS ##
+## COMMANDS
 
 For more advanced simple_dialogs you can add commands.  commands start with a colon ":" in position one.  Commands can be anywhere within the topic that makes sense to you.  I usually put them between the dialog and the replies.  They will be executed in the order they appear, as soon as the topic is displayed.
 Commands that are currently supported are
 
-### SET ###
+### SET
 
 :set variablename=value
 
@@ -177,7 +177,7 @@ To access the content of that variable you would use this format:
 @[@[playername]@.trust]@  (it will process the inner brackets first and populate the playername, then process the outerbrackets and get the stored variable)
 
 
-### GOTO ###
+### GOTO
 
 :goto topic
 
@@ -185,7 +185,7 @@ This is very simple, it just allows you to go to another topic.  This means that
 You can only nest gotos 3 levels deep, so there is no risk of getting stuck in a goto loop.
 While there ARE reasons to use a goto command directly in a dialog, it is most often used in conjunction with the :if command.
 
-### HOOK ###
+### HOOK
 
 Hook commands allow you to do things that are outside the purview of simple_dialogs, but have been allowed and coded by the entity mod.  For example, a hook might allow an npc to teleport you:
 
@@ -197,7 +197,7 @@ or a hook might allow the npc to trade:
 
 But the implementation of hooks is entirely up to the entity mod that is using simple_dialogs.  (As is the security around them!)
 
-### IF ###
+### IF
 
 :if (cond in parents) then cmnd
 
@@ -220,18 +220,18 @@ And do not forget to enclose the if condition in parenthesis.  You can nest pare
 Note that there is no ELSE functionality.  We may add that in the future.
 
 
-## FUNCTIONS ##
+## FUNCTIONS
 
 
 Several functions are available for you use.  These can be used in commands OR directly within a dialog
 
-### FIRST A NOTE ON LISTS ###
+### FIRST A NOTE ON LISTS
 functions add, rmv, isInList, and notInList all work on list that contain strings surrounded by vertical bars.
 So, for example a list of pets might look like
 |dog|cat|mouse|parakeet|
 As long as you are using the above mentioned functions to deal with the list, you don't need to worry about the vertical bars.  They will be added for you.
 
-### ADD() ###
+### ADD()
 
 add(variablename,stringtoadd)
 
@@ -242,7 +242,7 @@ Examples:
 :set FriendList=add(FriendList,@[playername]@)
 :set petlist=add(petlist,alligator)
 
-### RMV() ###
+### RMV()
 
 rmv(variablename,stringtoremove)
 
@@ -253,7 +253,7 @@ Examples:
 :set FriendList=rmv(FriendList,@[playername]@)
 :set petlist=rmv(petlist,mouse)
 
-### isInList() ###
+### isInList()
 
 isInList(variablename,stringToLookFor)
 
@@ -264,7 +264,7 @@ Examples:
 :if (isInList(friendlist,@[playername]@)) then goto friendly
 :if (isInList(petlist,hippo)) then set petresponse=And you can see my friendly hippo over in the mud pond.
 
-### notInList ###
+### notInList
 
 notInList(variablename,stringToLookFor)
 
@@ -275,7 +275,7 @@ Examples:
 :if (isNotInList(friendlist,@[playername]@)) then goto enemy
 :if (isNotInList(petlist,hippo)) then set petresponse=Do you have a hippo?  I need one.
 
-### isSet() ###
+### isSet()
 
 isSet(variablename)
 
@@ -285,7 +285,7 @@ Example:
 
 if (isSet(npcname)) then set myname=@[npcname]@
 
-### isNotSet() ###
+### isNotSet()
 
 isNotSet(variablename)
 
@@ -295,7 +295,7 @@ Example:
 
 if (isNotSet(npcname)) then set myname=Guido
 
-### yesno() ###
+### yesno()
 
 yesno(input)
 
@@ -308,7 +308,7 @@ Examples:
 Am I angry? yesno(@[angry]@)
 Are you in my friendlist? YesNo(isinlist(FriendList,@[playername]@))
 
-### calc() ###
+### calc()
 
 calc(stringOfMath)
 
@@ -319,7 +319,7 @@ Examples:
 :set value=calc(2*(12/4)+1)
 :set buyat=calc(@[gold]@*2)
 
-### WARNING: Variables by name or reference ###
+### WARNING: Variables by name or reference
 
 Be careful about referencing variables to be clear whether you want the variable name (literal) or the variable value (in at brackets)
 So, for example:
@@ -338,7 +338,7 @@ When you want to replace a variable with it's value, use at brackets.
 ---
 ---
 ---
-## Integrating simple_dialogs with an entity mod ##
+## Integrating simple_dialogs with an entity mod
 
 simple_dialogs is NOT a stand alone entity mod.  It just does the dialogs.  It needs to be integrated into an existing entity mod.  
 So, how do we do that?
@@ -361,12 +361,12 @@ end
 
 We will be adding some more here later, but this is enough for now.  
 
-### Add simple_dialog controls to the NPC right click menu ###
+### Add simple_dialog controls to the NPC right click menu
 
 There are two simple_dialogs right click menus.  One for the simple_dialog controls, where the owner can create and test a dialog.  And another for non-owners where we actually display the dialog conversation to another player.  Both are pretty easy to add.  But there are two ways to do it, depending on whether your entity already has a right click menu for owners or not.
 (the following examples are from testing with TenPlus1's mobs_redo mobs_npc entity mod)
 
-#### If the entity mod does not already have a right click menu for owners ####
+#### If the entity mod does not already have a right click menu for owners
 
 Just add the simple_dialogs right click menu, something like this:
 
@@ -385,7 +385,7 @@ Just add the simple_dialogs right click menu, something like this:
 
 simple_dialogs will take care of the register_on_player_receive_fields for you.
 
-#### if the entity mod already has a right click menu  for owners ####
+#### if the entity mod already has a right click menu  for owners
 
 Then you just want to add the simple_dialogs contols to your already existing formspec.  And this is actually pretty easy to do:
 
@@ -424,7 +424,7 @@ Our final on_rightclick function looks very similar to the one where we did not 
     end
 ```    
 
-### register a var loader ###
+### register a var loader
 
 This next step is enitrely optional.  If there are any entity mod variables you want to make available within simple_dialogs, you will need to register a varloader function.  And within that varloader function, call simple_dialogs.save_dialog_var to save the value into the npc simple_dialogs variable list.  
 
@@ -444,7 +444,7 @@ if (minetest.get_modpath("simple_dialogs")) then
 end --if simple_dialogs  
 <pre>
 
-### register any hook functions ###
+### register any hook functions
 
 Hook functions let you add further functionality to simple_dialogs.  The below example allows npc's who's owner has the teleport priv, to teleport players during a conversation.  Again, we place this within the same paragraph where we previously set the useDialogs flag.
 
@@ -488,7 +488,7 @@ simple_dialogs do not allow players to actually change anything outside of the d
 ---
 ---
 ---
-## The Security Of simple_dialogs ##
+## The Security Of simple_dialogs
 
 I have attempted to make simple_dialogs VERY secure.  The players have no access to lua.  The calc function DOES make use of loadstring.  But before loadstring is run, the input string is filtered to remove characters except for numbers and the characters ".+-*/^()".  Furthermore, the call to loadstring is sandboxed so that it has no access to any lua functions outside of loadstring itself.  I believe this should keep the function quite secure.  If anyone knows otherwise, PLEASE let me know.
 
@@ -497,7 +497,7 @@ I've also tried to code simple_dialogs to be crash proof.  Bad formating in a di
 ---
 ---
 ---
-## What still needs to be done? ##
+## What still needs to be done?
 
 I don't think I have properly integrated intllib for translating.  Any help on that would be greatly appreciated.
 
@@ -511,7 +511,7 @@ The formspec is functional, but rather boring.  If someone wanted to help me spi
 
 Lots of testing and feedback would be greatly appreciated.
 
-## Credit Where Credit Is Due ##
+## Credit Where Credit Is Due
 
 I was about half-way through this project, and struggling with the gui.  I wanted the player to be able to see the npc while they were talking to them.  This required either putting the formspec on one side, which left it more narrow than I wanted for replies.  Or I could stretch the dialog formspec across the bottom half of the screen, which was great for replies, but didn't look very good for the npc's part of the dialog.
 
