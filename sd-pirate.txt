@@ -1,4 +1,4 @@
-this is an example of a more advanced dialog that makes use of commands, variables, and functions.
+ this is an example of a more advanced dialog that makes use of commands, variables, and functions.
 
 ===Start
 this dialog will never be shown
