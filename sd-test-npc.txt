@@ -76,10 +76,14 @@ friendlist2=@[friendlist2]@
 
 the variable angry was set in a different topic, but can still be displayed here because variables live for as long as the npc lives.
 Am I angry? yesno(@[angry]@)
+
+And we have a compound, player specific variable:
+@[brackets1]@playername@[brackets2]@.trust=@[@[playername]@.trust]@
 :set ransetvars=*
 :set location=mountaains
 :set FriendList=add(FriendList,@[playername]@)
 :set FriendList2=rmv(FriendList,batman)
+:set @[playername]@.trust=High
 >begin:Back to the begining
 >End
 

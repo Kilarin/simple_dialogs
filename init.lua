@@ -16,7 +16,6 @@ chars.varclose="]@"
 local max_goto_depth=3 --TODO:move these to config
 
 local helpfile=minetest.get_modpath("simple_dialogs").."/simple_dialogs_help.txt"
-local transparentpng=minetest.get_modpath("simple_dialogs").."/transparent.png"
 
 local registered_varloaders={}
 local registered_hooks={}
@@ -121,7 +120,7 @@ function simple_dialogs.add_dialog_control_to_formspec(playername,npcself,formsp
 		passedInString="YES"
 	end
 	formspec[#formspec+1]="textarea["..x..","..y..";14,4.8;dialog;"..S("Dialog")..";"..minetest.formspec_escape(dialogtext).."]"
-	formspec[#formspec+1]="button["..x2..","..y2..";1.5,0.8;help;"..S("Help").."]"
+	formspec[#formspec+1]="button["..x2..","..y2..";1.5,0.8;dialoghelp;"..S("Dialog Help").."]"
 	formspec[#formspec+1]="button["..x3..","..y2..";1.5,0.8;save;"..S("Save").."]"
 	formspec[#formspec+1]="button["..x4..","..y2..";3,0.8;saveandtest;"..S("Save & Test").."]"
 	if passedInString=="YES" then
@@ -134,12 +133,14 @@ end --add_dialog_control_to_formspec
 --then use THIS in your register_on_player_receive_fields function
 --it will process the save, saveandtest and dialog help buttons.
 function simple_dialogs.process_simple_dialog_control_fields(playername,npcself,fields)
+	--minetest.log("simple_dialogs->psdcf fields="..dump(fields))
 	if fields["save"] or fields["saveandtest"] then
 		simple_dialogs.load_dialog_from_string(npcself,fields["dialog"])
 	end --save or saveandtest
 	if fields["saveandtest"] then
 		simple_dialogs.show_dialog_formspec(playername,npcself,"START")
-	elseif fields["dialog help"] then
+	elseif fields["dialoghelp"] then
+		--minetest.log("simple_dialogs->psdcf help")
 		simple_dialogs.dialog_help(playername)
 	end
 end --process_simple_dialog_control_fields
@@ -773,15 +774,17 @@ end --find operator
 --I need a way to deal with this by language
 function simple_dialogs.dialog_help(playername)
 	--local file = io.open(minetest.get_modpath("simple_dialogs").."/simple_dialogs_help.txt", "r")
+	--minetest.log("simple_dialogs-> dh top")
 	local file = io.open(helpfile, "r")
 	if file then
+		--minetest.log("simple_dialogs-> dh if file")
 		--local help
 		local helpstr=file:read("*all")
 		file.close()
 		local formspec={
 		"formspec_version[4]",
 		"size[15,15]", 
-		"textarea[0.375,0.35;14,14;;help;"..minetest.formspec_escape(helpstr).."]"
+		"textarea[0.375,0.35;14,14;;Simple_Dialogs-Help;"..minetest.formspec_escape(helpstr).."]"
 		}
 		minetest.show_formspec(playername,"simple_dialogs:dialoghelp",table.concat(formspec))
 	else
@@ -1248,9 +1251,9 @@ function simple_dialogs.is_set(npcself,grouping,isornot,line)
 					rtn="1"
 				end
 			end
-			--minetest.log("simple_dialogs->is var="..varname.."< rtn="..rtn)
 			rtn=is_or_not(rtn,isornot)
 			line=simple_dialogs.grouping_replace(grouping,g,rtn,"INCLUSIVE")
+			--minetest.log("simple_dialogs->is var="..varname.."< rtn="..rtn.." line="..line)
 		end --for
 	end --if grouping
 	return line

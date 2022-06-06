@@ -16,7 +16,7 @@ if (minetest.get_modpath("simple_dialogs")) then
 		simple_dialogs.save_dialog_var(npcself,"NPCNAME",npcself.nametag,playername)
 		simple_dialogs.save_dialog_var(npcself,"STATE",npcself.state,playername)
 		simple_dialogs.save_dialog_var(npcself,"FOOD",npcself.food,playername)
-		simple_dialogs.save_dialog_var(npcself,"HEALTH",npcself.food,playername)
+		simple_dialogs.save_dialog_var(npcself,"HEALTH",npcself.health,playername)
 		simple_dialogs.save_dialog_var(npcself,"owner",npcself.owner,playername)
 	end)--register_varloader
 
