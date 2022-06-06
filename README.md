@@ -30,7 +30,7 @@ What be ye doin here?  Arrrgh!  This be no fit place for land lubbers!
 ```
 ## TOPICS ##
 
-The dialog starts with a topic, a topic is any line that has an equal sign "=" in pos one.  Every dialog file must have at least one START topic.
+The dialog starts with a topic, a topic is any line that has an equal sign "=" in position one.  Every dialog file must have at least one START topic.
 Topics are not case sensitive, and any characters besides letters, digits, dashes, and underscores are removed.  Start, start, st art, and START will all be treated the same by simple dialogs.  This also means all equal symbols will be removed.  Every topic must start with one equal sign, I like three, I think it makes them stand out more, but it doesn't matter how many equal signs you have at the begining, as long as you have at least one, in position one.
 You can also add a "weight" to a topic line if you wish, we will talk more about that later.
 
@@ -38,7 +38,7 @@ Following the topic will be the dialog you want the character to say.  This can 
 
 ## REPLIES #
 
-After the dialog will come the replies.  Replies all start with a > sign.  Followed by a target, followed by a colon, then by the text of the reply.  The target is the dialog topic you want to go to next.
+After the dialog will come the replies.  Replies all start with a great than sign ">" in position one.  Followed by a target, followed by a colon, then by the text of the reply.  The target is the dialog topic you want to go to next.
 
 ```
 >name:What is your name
@@ -152,7 +152,7 @@ When the above dialog is displayed @[playername]@ will be replaced by the actual
 
 ## COMMANDS ##
 
-For more advanced simple_dialogs you can add commands.  commands start with a : in position one.  Commands can be anywhere within the topic that makes sense to you.  I usually put them between the dialog and the replies.  They will be executed in the order they appear, as soon as the topic is displayed.
+For more advanced simple_dialogs you can add commands.  commands start with a colon ":" in position one.  Commands can be anywhere within the topic that makes sense to you.  I usually put them between the dialog and the replies.  They will be executed in the order they appear, as soon as the topic is displayed.
 Commands that are currently supported are
 
 ### SET ###
