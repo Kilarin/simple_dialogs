@@ -47,7 +47,7 @@ After the dialog will come the replies.  Replies all start with a greater than s
 So in the above reply, the target is "name", and the display field is "What is your name"
 "What is your name" will be displayed in the reply area, and if the user clicks on it, the dialog will move to the "name" topic.
 
-There is one special target, that is "end"  That does NOT go to another dialog topic, instead it closes the formspec and ends the conversation.
+There is one special target, "end", that does NOT go to another dialog topic, instead it closes the formspec and ends the conversation.
 
 ## ADDING MORE TOPICS
 
@@ -73,7 +73,7 @@ My name be Davey Jones.  Not that it be any business of a bildge rat like you!
 ```
 
 Now we have created the "Name" topic.  So, if the player clicks on "What is your name" in the start section, the dialog will move to the "name" section and display that.
-You keep adding sections until every possible path through the dialog has a dialog topic for it.
+You keep adding topics until every possible path through the dialog has a dialog topic for it.
 It is very important that you do NOT have reply targets that do not actually match up with a dialog topic.  If you do, your dialog will not work.
 
 
@@ -152,7 +152,8 @@ When the above dialog is displayed @[playername]@ will be replaced by the actual
 
 ## COMMANDS
 
-For more advanced simple_dialogs you can add commands.  commands start with a colon ":" in position one.  Commands can be anywhere within the topic that makes sense to you.  I usually put them between the dialog and the replies.  They will be executed in the order they appear, as soon as the topic is displayed.
+For more advanced simple_dialogs you can add commands.  commands start with a colon ":" in position one.  Commands can be anywhere within the topic that makes sense to you.  I usually put them between the dialog and the replies.  They will be executed in the order they appear, BEFORE anything else is displayed.  So you can set any variables in commands and expect them to be populated correctly in that topics dialog or replies.
+
 Commands that are currently supported are
 
 ### SET
@@ -162,7 +163,9 @@ Commands that are currently supported are
 This lets you set your own variables.  Some examples of the command in use:
 
 :set angry=Y
+
 :set friendlist=|Joe|SallyMiner|BigBuilder|
+
 :set myname=@[npcname]@
 
 Note that we enclosed npcname in at brackets, and we did NOT enclose myname in at brackets.  That is because we want the VALUE of the variable npcname to be placed into the variable myname.  If we had said :set myname=npcname then myname would be equal to the string "npcname"
@@ -206,7 +209,9 @@ The condition for if has to be enclosed in parenthesis.  the cmnd that follows t
 Examples:
 
 :if (@[hunger]@>3) then goto feedme
+
 :if (@[playername]@==@[owner]@) then set greeting=Hello Boss!
+
 :if ( (@[angry]@==N) and (isInList(FriendList,@[playername]@)) ) then set friendstatus=You are my very best friend!
 
 You probably noticed the function isInList() in there, more on that later.
@@ -240,6 +245,7 @@ Adds a new element to a list, if that element is not already in the list.
 Examples:
 
 :set FriendList=add(FriendList,@[playername]@)
+
 :set petlist=add(petlist,alligator)
 
 ### RMV()
@@ -251,6 +257,7 @@ Removes an element from a list
 Examples:
 
 :set FriendList=rmv(FriendList,@[playername]@)
+
 :set petlist=rmv(petlist,mouse)
 
 ### isInList()
@@ -262,6 +269,7 @@ Returns true if stringToLookFor is contained in the list in variablename.  (surr
 Examples:
 
 :if (isInList(friendlist,@[playername]@)) then goto friendly
+
 :if (isInList(petlist,hippo)) then set petresponse=And you can see my friendly hippo over in the mud pond.
 
 ### notInList
@@ -273,6 +281,7 @@ this is just the opposite of isInList
 Examples:
 
 :if (isNotInList(friendlist,@[playername]@)) then goto enemy
+
 :if (isNotInList(petlist,hippo)) then set petresponse=Do you have a hippo?  I need one.
 
 ### isSet()
@@ -300,12 +309,15 @@ if (isNotSet(npcname)) then set myname=Guido
 yesno(input)
 
 When input is "0" or "N", this will return "No"
+
 When input is "1" or "Y", this will return "Yes"
+
 It is useful for displaying function results or variables directly in a dialog.  Do NOT use this in an If statement, since that expects "1" or "0"
 
 Examples:
 
 Am I angry? yesno(@[angry]@)
+
 Are you in my friendlist? YesNo(isinlist(FriendList,@[playername]@))
 
 ### calc()
@@ -317,19 +329,27 @@ This function does math on input strings.
 Examples:
 
 :set value=calc(2*(12/4)+1)
+
 :set buyat=calc(@[gold]@*2)
 
 ### WARNING: Variables by name or reference
 
 Be careful about referencing variables to be clear whether you want the variable name (literal) or the variable value (in at brackets)
 So, for example:
+
 :set myname=Long John Silver
+
 will set the variable myname to the value "Long John Silver"
+
 but this:
+
 :set myname=Long John Silver
+
 :set @[myname]@=Calico Jack
+
 Will first replace myname with whatever value is in there.  Which is "Long John Silver"
 And THEN execute the set command, so in the end it would actually be doing:
+
 :set LONGJOHNSILVER=Calico Jack
 
 When you want to reference a variable name, do not use at brackets.
@@ -500,6 +520,8 @@ I've also tried to code simple_dialogs to be crash proof.  Bad formating in a di
 ## What still needs to be done?
 
 I don't think I have properly integrated intllib for translating.  Any help on that would be greatly appreciated.
+
+Right now simple_dialogs gives very little feedback about poorly formated dialog strings.  If you mess up the dialog, things just get dropped and you have to figure out for yourself why.  Some kind of feedback to the player telling them what part of their dialog was flawed would be useful.
 
 The parser that simple_dialogs uses is rather primitive.  It doesn't handle quotes, and it has no way to escape special characters.  Now, in general, this doesn't matter.  It's just a dialog processor, its pretty unlikely anyone will be stretching it to the point that these things matter.  BUT, there is certainly room to improve it.
 
