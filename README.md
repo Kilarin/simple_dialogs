@@ -38,7 +38,7 @@ Following the topic will be the dialog you want the character to say.  This can 
 
 ## REPLIES #
 
-After the dialog will come the replies.  Replies all start with a great than sign ">" in position one.  Followed by a target, followed by a colon, then by the text of the reply.  The target is the dialog topic you want to go to next.
+After the dialog will come the replies.  Replies all start with a greater than sign ">" in position one.  Followed by a target, followed by a colon, then by the text of the reply.  The target is the dialog topic you want to go to next.
 
 ```
 >name:What is your name
