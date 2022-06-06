@@ -5,7 +5,7 @@
 ## License
 This code is licensed under the MIT License
 
-![](https://i.imgur.com/bhZ9Hjw.png)
+![](https://i.imgur.com/ErgHNQP.png)
 
 Simple Dialogs is NOT a stand alone entity mod, rather it is an add on that is designed to be (rather easily) integrated with other entity mods.
 
