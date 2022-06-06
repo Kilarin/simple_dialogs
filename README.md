@@ -479,7 +479,7 @@ Hook functions let you add further functionality to simple_dialogs.  The below e
 if (minetest.get_modpath("simple_dialogs")) then
   useDialogs="Y"
     ...</i>
-    <b>simple_dialogs.register_hook(function(npcself,playername,hook)
+    <b><span style="color:blue">simple_dialogs.register_hook(function(npcself,playername,hook)
     if hook.func=="TELEPORT" then
       if npcself.owner then
         --check to see if the npc owner has teleport privliges
@@ -504,7 +504,7 @@ if (minetest.get_modpath("simple_dialogs")) then
       end --if npcself.owner
     return "EXIT"
     end --if hook.func
-  end)--register_hook</b>
+  end)--register_hook</span></b>
 <i>end --if simple_dialogs</i>
 </pre>
 
