@@ -19,7 +19,7 @@ Of course, dialogs can be used by the server owner/game designer as well.  They 
 
 So, how does all of this work?  The heart and key to simple dialogs is the dialog control text.  Which, at it's simplist, looks something like this:
 
-```plaintext
+```
 ===Start
 Shiver me timbers, but you caught me by surprise matey!
 What be ye doin here?  Arrrgh!  This be no fit place for land lubbers!
@@ -359,6 +359,7 @@ When you want to replace a variable with it's value, use at brackets.
 
 Combining topics, commands, and replies can allow you to create some really complex simple_dialogs.  (yes, just wallow in the oxymoron and enjoy it!)
 You can find some example dialog scripts in the simple_dialogs mod folder.  They are all have names in the format of sd-*.txt
+https://github.com/Kilarin/simple_dialogs
 
 ---
 ---
@@ -479,7 +480,7 @@ Hook functions let you add further functionality to simple_dialogs.  The below e
 if (minetest.get_modpath("simple_dialogs")) then
   useDialogs="Y"
     ...</i>
-    <b><span style="color:blue">simple_dialogs.register_hook(function(npcself,playername,hook)
+    <b>simple_dialogs.register_hook(function(npcself,playername,hook)
     if hook.func=="TELEPORT" then
       if npcself.owner then
         --check to see if the npc owner has teleport privliges
@@ -504,12 +505,13 @@ if (minetest.get_modpath("simple_dialogs")) then
       end --if npcself.owner
     return "EXIT"
     end --if hook.func
-  end)--register_hook</span></b>
+  end)--register_hook</b>
 <i>end --if simple_dialogs</i>
 </pre>
 
 Another good example of a hook might be to initiate a trade dialog.  Or even to switch the npc into hostile mode and cause it to start attacking.  
 simple_dialogs do not allow players to actually change anything outside of the dialog itself.  Which makes it quite secure.  Hooks let the entity mob give npcs more interactive things they can do.  But the security of that function rest entirely upon the entity mod.  
+Hooks can be designed to either terminate a dialog when done, or to let it continue.
 
 ---
 ---
@@ -543,9 +545,9 @@ Lots of testing and feedback would be greatly appreciated.
 
 I was about half-way through this project, and struggling with the gui.  I wanted the player to be able to see the npc while they were talking to them.  This required either putting the formspec on one side, which left it more narrow than I wanted for replies.  Or I could stretch the dialog formspec across the bottom half of the screen, which was great for replies, but didn't look very good for the npc's part of the dialog.
 
-So, I decided to take a break an log on to a multi-player server.  I had been on the "Your Land" server in the past, but only briefly.  This time I spent a bit more time exploring and discovered that they already had npc's with dialogs!  Theirs, I believe, operate via a lua api, so I think they are very different from this code. 
+So, I decided to take a break and log on to a multi-player minetest server.  I had been on the "Your Land" server in the past, but only briefly.  This time I spent a bit more time exploring and discovered that they already had npc's with dialogs!  Theirs, I believe, operate via a lua api, so I think they are very different from this code. 
 The one thing I DID notice, was their gui.  They were using a transparent background for the formspec so that they could have the npc dialog part of the formspec off to one side, and the replies down below.  I didn't even know that was POSSIBLE.  So, I went back to work on my mod, figured out (with some help on the forum) how to do a formspec with a transparent background, and thus you get the formspec in it's current form.
-I've never seen the code for the npc's that is used on Your Land, and I don't even know who the coder is that I should credit, but I definitly borrowed a design element from them, and so, Thank you!
+I've never seen the code for the npcs that is used on Your Land, and I don't even know who the coder is that I should credit, but I definitly borrowed a design element from them, and so, Thank you!
 
 
 

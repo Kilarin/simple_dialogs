@@ -1,49 +1,40 @@
-Simple Dialogs are just text files, and they are fairly simple.
+So, how does all of this work?  The heart and key to simple dialogs is the dialog control text.  Which, at it's simplist, looks something like this:
 
-This is an example of a simple dialog text file:
-
----
-
+--------------------
 ===Start
 Shiver me timbers, but you caught me by surprise matey!
 What be ye doin here?  Arrrgh!  This be no fit place for land lubbers!
-
 >name:What is your name
 >arrg:Why do pirates always say Arrrgh?
 >treasure:I'm looking for treasure.  Can you tell me where the treasure is?
 >rude:What's got you so cranky?  Did a beaver chew on your wooden leg?
->end:Good bye.
+--------------------
+## TOPICS
 
----
-
-*****TOPICS*****
-
-The dialog starts with a topic, a topic is any line that has an = in pos 1.  And every dialog file must have at least one START topic.
-topics are not case sensitive, and any characters besides letters, digits, dashes, and underscores are removed.  letters are all converted to uppercase.
-This means ALL equal symbols will be removed.  Every topic must start with one equal sign, I like three, I think it makes them stand out more, but it doesn't matter how many equal signs you have at the begining, as long as you have at least one.
-so Start, start, st art, and START will all be treated the same by simple dialogs.
+The dialog starts with a topic, a topic is any line that has an equal sign "=" in position one.  Every dialog file must have at least one START topic.
+Topics are not case sensitive, and any characters besides letters, digits, dashes, and underscores are removed.  Start, start, st art, and START will all be treated the same by simple dialogs.  This also means all equal symbols will be removed.  Every topic must start with one equal sign, I like three, I think it makes them stand out more, but it doesn't matter how many equal signs you have at the begining, as long as you have at least one, in position one.
 You can also add a "weight" to a topic line if you wish, we will talk more about that later.
 
-Following the topic will be the dialog you want the character to say.  This can be as long or as short as you wish.  Just don't start any lines with =, :, or > in position one.
+Following the topic will be the dialog you want the character to say.  This can be as long or as short as you wish.  Just don't start any lines with "=", ":", or ">" in position one.
 
-*****REPLIES*****
+## REPLIES
 
-After the dialog will come the replies.  Replies all start with a > sign.  Followed by a target, followed by a colon, then by the text of the reply.  The target is the dialog topic you want to go to next.
+After the dialog will come the replies.  Replies all start with a greater than sign ">" in position one.  Followed by a target, followed by a colon, then by the text of the reply.  The target is the dialog topic you want to go to next.
 
+--------------------
 >name:What is your name
+--------------------
 
 So in the above reply, the target is "name", and the display field is "What is your name"
 "What is your name" will be displayed in the reply area, and if the user clicks on it, the dialog will move to the "name" topic.
 
-There is one special target, that is "end"  That does NOT go to another dialog topic, instead it closes the formspec and ends the conversation.
+There is one special target, "end", that does NOT go to another dialog topic, instead it closes the formspec and ends the conversation.
 
+## ADDING MORE TOPICS
 
-*****ADDING MORE TOPICS*****
+Of course, every "target" in a reply must have a corresponding topic to go to.  So lets expand our dialog with another topic:
 
-So lets expand our dialog with another topic:
-
----
-
+--------------------
 ===Start
 Shiver me timbers, but you caught me by surprise matey!
 What be ye doin here?  Arrrgh!  This be no fit place for land lubbers!
@@ -60,21 +51,19 @@ My name be Davey Jones.  Not that it be any business of a bildge rat like you!
 >arrg:Why do pirates always say Arrrgh?
 >treasure:I'm looking for treasure.  Can you tell me where the treasure is?
 >rude:What's got you so cranky?  Did a beaver chew on your leg?
+--------------------
 
----
-
-Now we have creeated the "Name" topic.  So, if the player clicks on "What is your name" in the start section, the dialog will move to the "name" section and display that.
-You keep adding sections until every possible path through the dialog has a dialog topic for it.
+Now we have created the "Name" topic.  So, if the player clicks on "What is your name" in the start section, the dialog will move to the "name" section and display that.
+You keep adding topics until every possible path through the dialog has a dialog topic for it.
 It is very important that you do NOT have reply targets that do not actually match up with a dialog topic.  If you do, your dialog will not work.
 
 
-*****WEIGHTED TOPICS*****
+## WEIGHTED TOPICS
 
 It is possible to have multiple topics with the same topic name.  When you do that, simple_dialogs will chose randomly which topic is shown.
 Example:
 
----
-
+--------------------
 ===Start
 I am the mystic of the temple.  Do you have a question?
 >dragon:Where does the dragon live and how can I defeat him?
@@ -94,15 +83,13 @@ You ask the wrong questions.  Go and gain more wisdom first, perhaps study with 
 Hmmm, I think you are foolish to ask this question, but wisdom comes through hard trials.
 The dragon lives on the black mountain in the land of the elves.  As for how to defeat him?  Ask the elves.
 >end:Thank you!
-
----
+--------------------
 
 So in the above dialog, if the player clicks on "Where does the dragon live and how can I defeat him?"  He will get one of three possible responses randomly.  Each just as likely to come up as the others.
 
 BUT, what if you wanted to change the odds of which topic shows up?  Well, that is actually quite easy to do.  You just add a weight (in parenthesis) after the topic name.  like below:
 
----
-
+--------------------
 ===Dragon(4)
 You do not appear wise enough to handle the answer to that question.
 >start:I really need to know the answer though!
@@ -117,13 +104,12 @@ You ask the wrong questions.  Go and gain more wisdom first, perhaps study with 
 Hmmm, I think you are foolish to ask this question, but wisdom comes through hard trials.
 The dragon lives on the black mountain in the land of the elves.  As for how to defeat him?  Ask the elves.
 >end:Thank you!
+--------------------
 
----
-
-so, in the above example, the first "dragon" topic has a weight of 4, the second 3, and the last one 1.  When going to the dragon topic, simple_dialogs will roll a random number between 1 and 8 (4+3+1=8) If the number comes up 1-4, the first Dragon topic will show.  If it comes up 5-7, the second topic will show.  And only if the number comes up 8 will the last topic show.  
+so, in the above example, the first "dragon" topic has a weight of 4, the second 3, and the last one 1.  When going to the dragon topic, simple_dialogs will roll a random number between 1 and 8 (4+3+1=8) If the number comes up 1-4, the first Dragon topic will show.  If it comes up 5-7, the second topic will show.  And only if the number comes up 8 will the last topic show.
 
 
-*****VARIABLES*****
+## VARIABLES
 
 You can use variables in your dialogs.  Variables should be enclosed in at sign brackets, like this:
 @[playername]@
@@ -135,31 +121,32 @@ And you can set your own variables (more on that later)
 
 An example of using a variable in a dialog:
 
----
-
+--------------------
 ===Start
-Hello @[playername]@.  I am the wizard Fladnag.  And forsaw that you would come to see me today.
->tower:What is this tower and how can I explore it
+Hello @[playername]@.  I am the wizard Fladnag.  I forsaw that you would come to see me today.
+>tower:Tell me about your tower please?
 >spell:Will you cast a spell for me?
 >end:I prefer not to meddle in the affairs of wizards, for they are subtle and quick to anger.
-
----
+--------------------
 
 When the above dialog is displayed @[playername]@ will be replaced by the actual playername.
 
-*****COMMANDS*****
+## COMMANDS
 
-For more advanced simple_dialogs you can add commands.  commands start with a : in position one.  Commands can be anywhere within the topic that makes sense to you.  I usually put them between the dialog and the replies.  They will be executed in the order they appear, as soon as the topic is displayed.
+For more advanced simple_dialogs you can add commands.  commands start with a colon ":" in position one.  Commands can be anywhere within the topic that makes sense to you.  I usually put them between the dialog and the replies.  They will be executed in the order they appear, BEFORE anything else is displayed.  So you can set any variables in commands and expect them to be populated correctly in that topics dialog or replies.
+
 Commands that are currently supported are
 
----SET---
+### SET
 
 :set variablename=value
 
 This lets you set your own variables.  Some examples of the command in use:
 
 :set angry=Y
+
 :set friendlist=|Joe|SallyMiner|BigBuilder|
+
 :set myname=@[npcname]@
 
 Note that we enclosed npcname in at brackets, and we did NOT enclose myname in at brackets.  That is because we want the VALUE of the variable npcname to be placed into the variable myname.  If we had said :set myname=npcname then myname would be equal to the string "npcname"
@@ -169,11 +156,12 @@ In a multiplayer game, remember that the variables for an npc are global.  If yo
 
 :set @[playername]@.trust=High
 
-sets a variable "trust" that would be DIFFERENT for every player.  To access the content of that variable you would use this format:
+sets a variable "trust" that would be DIFFERENT for every player.  For example, if the players name is singleplayer, the actual variable set would be singleplayer.trust
+To access the content of that variable you would use this format:
 @[@[playername]@.trust]@  (it will process the inner brackets first and populate the playername, then process the outerbrackets and get the stored variable)
 
 
----GOTO---
+### GOTO
 
 :goto topic
 
@@ -181,7 +169,7 @@ This is very simple, it just allows you to go to another topic.  This means that
 You can only nest gotos 3 levels deep, so there is no risk of getting stuck in a goto loop.
 While there ARE reasons to use a goto command directly in a dialog, it is most often used in conjunction with the :if command.
 
----HOOK---
+### HOOK
 
 Hook commands allow you to do things that are outside the purview of simple_dialogs, but have been allowed and coded by the entity mod.  For example, a hook might allow an npc to teleport you:
 
@@ -191,9 +179,9 @@ or a hook might allow the npc to trade:
 
 :HOOK TRADE
 
-But the implementation of hooks is entirely up to the entity mod that is using simple_dialogs.  (As is the security around them!)  
+But the implementation of hooks is entirely up to the entity mod that is using simple_dialogs.  (As is the security around them!)
 
----IF---
+### IF
 
 :if (cond in parents) then cmnd
 
@@ -202,32 +190,34 @@ The condition for if has to be enclosed in parenthesis.  the cmnd that follows t
 Examples:
 
 :if (@[hunger]@>3) then goto feedme
+
 :if (@[playername]@==@[owner]@) then set greeting=Hello Boss!
+
 :if ( (@[angry]@==N) and (isInList(FriendList,@[playername]@)) ) then set friendstatus=You are my very best friend!
 
 You probably noticed the function isInList() in there, more on that later.
 Some important things to remember about :If
-you MUST include the command name to be executed after the "THEN".  
-then greeting=Hello Boss! 
-will NOT work.  It has to be 
+you MUST include the command name to be executed after the "THEN".
+then greeting=Hello Boss!
+will NOT work.  It has to be
 then set greeting=Hello Boss!
 And do not forget to enclose the if condition in parenthesis.  You can nest parenthesis as deeply as you wish, but the entire condition must be enclosed in parenthesis.
 
 Note that there is no ELSE functionality.  We may add that in the future.
 
 
-*****FUNCTIONS*****
+## FUNCTIONS
 
 
 Several functions are available for you use.  These can be used in commands OR directly within a dialog
 
----FIRST A NOTE ON LISTS---
+### FIRST A NOTE ON LISTS
 functions add, rmv, isInList, and notInList all work on list that contain strings surrounded by vertical bars.
 So, for example a list of pets might look like
 |dog|cat|mouse|parakeet|
 As long as you are using the above mentioned functions to deal with the list, you don't need to worry about the vertical bars.  They will be added for you.
 
----ADD()---
+### ADD()
 
 add(variablename,stringtoadd)
 
@@ -236,20 +226,22 @@ Adds a new element to a list, if that element is not already in the list.
 Examples:
 
 :set FriendList=add(FriendList,@[playername]@)
+
 :set petlist=add(petlist,alligator)
 
----RMV()---
+### RMV()
 
 rmv(variablename,stringtoremove)
 
-Removes an element from a list 
+Removes an element from a list
 
 Examples:
 
 :set FriendList=rmv(FriendList,@[playername]@)
+
 :set petlist=rmv(petlist,mouse)
 
----isInList()---
+### isInList()
 
 isInList(variablename,stringToLookFor)
 
@@ -258,9 +250,10 @@ Returns true if stringToLookFor is contained in the list in variablename.  (surr
 Examples:
 
 :if (isInList(friendlist,@[playername]@)) then goto friendly
+
 :if (isInList(petlist,hippo)) then set petresponse=And you can see my friendly hippo over in the mud pond.
 
----notInList--
+### notInList
 
 notInList(variablename,stringToLookFor)
 
@@ -269,40 +262,46 @@ this is just the opposite of isInList
 Examples:
 
 :if (isNotInList(friendlist,@[playername]@)) then goto enemy
+
 :if (isNotInList(petlist,hippo)) then set petresponse=Do you have a hippo?  I need one.
 
----isSet()---
+### isSet()
 
 isSet(variablename)
 
-this returns true if the variable variablename exists for this npc and is not empty.
+This returns true if the variable variablename exists for this npc and is not empty.
 
 Example:
 
 if (isSet(npcname)) then set myname=@[npcname]@
 
----isNotSet()---
+### isNotSet()
 
 isNotSet(variablename)
+
+This is the opposite of isSet and returns true if the variable variablename does NOT exist for this npc, or is empty.
 
 Example:
 
 if (isNotSet(npcname)) then set myname=Guido
 
----yesno()---
+### yesno()
 
 yesno(input)
 
 When input is "0" or "N", this will return "No"
+
 When input is "1" or "Y", this will return "Yes"
+
 It is useful for displaying function results or variables directly in a dialog.  Do NOT use this in an If statement, since that expects "1" or "0"
 
 Examples:
 
 Am I angry? yesno(@[angry]@)
+
 Are you in my friendlist? YesNo(isinlist(FriendList,@[playername]@))
 
----calc---
+### calc()
 
 calc(stringOfMath)
 
@@ -311,33 +310,34 @@ This function does math on input strings.
 Examples:
 
 :set value=calc(2*(12/4)+1)
+
 :set buyat=calc(@[gold]@*2)
 
----WARNING: Variables by name or reference---
+### WARNING: Variables by name or reference
 
 Be careful about referencing variables to be clear whether you want the variable name (literal) or the variable value (in at brackets)
 So, for example:
+
 :set myname=Long John Silver
+
 will set the variable myname to the value "Long John Silver"
+
 but this:
+
 :set myname=Long John Silver
+
 :set @[myname]@=Calico Jack
+
 Will first replace myname with whatever value is in there.  Which is "Long John Silver"
 And THEN execute the set command, so in the end it would actually be doing:
+
 :set LONGJOHNSILVER=Calico Jack
 
 When you want to reference a variable name, do not use at brackets.
 When you want to replace a variable with it's value, use at brackets.
 
-*****CONCLUSION*****
+### CONCLUSION
 
-combining topics, commands, and replies can allow you to create some really complex simple_dialogs.  (yes, just wallow in the oxymoron and enjoy it!) 
-
-An example follows:
-
-
-
-
-
-
-
+Combining topics, commands, and replies can allow you to create some really complex simple_dialogs.  (yes, just wallow in the oxymoron and enjoy it!)
+You can find some example dialog scripts in the simple_dialogs mod folder.  They are all have names in the format of sd-*.txt
+https://github.com/Kilarin/simple_dialogs

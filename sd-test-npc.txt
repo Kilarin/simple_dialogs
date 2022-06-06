@@ -317,7 +317,7 @@ interpreting the variable.  (I need escape logic!)
 ===hooks
 Hooks are ways for you to call more advanced functionality from a dialog that goes beyond conversation with the npc.
 For example, this test uses a hook that allows an npc who's owner has the teleport priv, to teleport people.
-Hooks are called from simple_dialogs, but they are run in the entity mod, and security around hooks is entirely the responsibility of the entity mod.  For example, the example telepor hook in mods redo checks to see if the npc owner has teleport privs before it executes the teleport.
+Hooks are called from simple_dialogs, but they are run in the entity mod, and security around hooks is entirely the responsibility of the entity mod.  For example, the example teleport hook in mods redo checks to see if the npc owner has teleport privs before it executes the teleport.
 Test below:
 >teleport:teleport to -500,3,-80
 >begin:Back to the begining
@@ -325,8 +325,10 @@ Test below:
 --- -496,3,-82
 
 ===teleport
-You shouldn't see this screen because you teleport from here.
+If there is a working teleport hook, then you shouldn't see this screen because you teleport from here.
 :hook teleport -500,3,-80
+>hooks:Back to the hook screen
+>begin:Back to the begining
 >End
 
 

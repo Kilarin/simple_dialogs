@@ -623,8 +623,8 @@ function simple_dialogs.execute_cmnd(npcself,cmnd,playername)
 				return ""
 			end --if gototopic.count
 		elseif cmnd.cmnd=="HOOK" then
-			--minetest.log("simple_dialogs->ec hook")
-			for f=1,#registered_varloaders do
+			--minetest.log("simple_dialogs->ec hook registered_hooks="..#registered_hooks)
+			for f=1,#registered_hooks do
 				local rtn=registered_hooks[f](npcself,playername,cmnd)
 				--minetest.log("simple_dialogs->ec hook rtn="..dump(rtn))
 				if rtn and rtn=="EXIT" then
