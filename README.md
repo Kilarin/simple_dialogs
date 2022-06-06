@@ -308,7 +308,7 @@ Examples:
 Am I angry? yesno(@[angry]@)
 Are you in my friendlist? YesNo(isinlist(FriendList,@[playername]@))
 
-### calc ###
+### calc() ###
 
 calc(stringOfMath)
 
