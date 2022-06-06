@@ -355,9 +355,15 @@ And THEN execute the set command, so in the end it would actually be doing:
 When you want to reference a variable name, do not use at brackets.
 When you want to replace a variable with it's value, use at brackets.
 
+### CONCLUSION
+
+Combining topics, commands, and replies can allow you to create some really complex simple_dialogs.  (yes, just wallow in the oxymoron and enjoy it!)
+You can find some example dialog scripts in the simple_dialogs mod folder.  They are all have names in the format of sd-*.txt
+
 ---
 ---
 ---
+
 ## Integrating simple_dialogs with an entity mod
 
 simple_dialogs is NOT a stand alone entity mod.  It just does the dialogs.  It needs to be integrated into an existing entity mod.  
@@ -431,7 +437,7 @@ function get_npc_controls_formspec(name,self)
 end
 </pre>
 
-Note that only two lines had to be added here.  We changed the size to accomodate the new controls, and just used add_dialog_control_to_formspec to add the dialog controls to the existing formspec.
+Note that only two lines (the bolded ones) had to be added here.  We changed the size to accomodate the new controls, and just used add_dialog_control_to_formspec to add the dialog controls to the existing formspec.
 Our final on_rightclick function looks very similar to the one where we did not have an existing owner formspec:
 
 ```
@@ -462,7 +468,7 @@ if (minetest.get_modpath("simple_dialogs")) then
     simple_dialogs.save_dialog_var(npcself,"owner",npcself.owner,playername)
   end)--register_varloader</b>
 end --if simple_dialogs  
-<pre>
+</pre>
 
 ### register any hook functions
 
