@@ -10,8 +10,8 @@ minetest.register_on_leaveplayer(function(player)
 end)
 
 local useDialogs="N"
-if (minetest.get_modpath("simple_dialogs")) then 
-	useDialogs="Y" 
+if (minetest.get_modpath("simple_dialogs")) then
+	useDialogs="Y"
 	simple_dialogs.register_varloader(function(npcself,playername)
 		simple_dialogs.save_dialog_var(npcself,"NPCNAME",npcself.nametag,playername)
 		simple_dialogs.save_dialog_var(npcself,"STATE",npcself.state,playername)
@@ -33,11 +33,11 @@ if (minetest.get_modpath("simple_dialogs")) then
 						pos.y=tonumber(hook.parm[2])
 						pos.z=tonumber(hook.parm[3])
 						if pos.x and pos.y and pos.z and
-							pos.x>-31500 and pos.x<31500 and 
+							pos.x>-31500 and pos.x<31500 and
 							pos.y>-31500 and pos.y<31500 and
 							pos.z>-31500 and pos.z<31500 then
 							local player = minetest.get_player_by_name(playername)
-							if player then 
+							if player then
 								player:set_pos(pos) end
 						end --if tonumber
 					end --if hook.parm
@@ -128,11 +128,6 @@ mobs:register_mob("mobs_npc:npc", {
 		local item = clicker:get_wielded_item()
 		local name = clicker:get_player_name()
 
-		-- right clicking with tin_lump changes owner TODO: this is for testing, REMOVE
-		if item:get_name() == "default:tin_lump" then
-			self.owner="notyou"
-		end
-		
 		-- right clicking with gold lump drops random item from mobs.npc_drops
 		if item:get_name() == "default:gold_lump" then
 
@@ -169,7 +164,7 @@ mobs:register_mob("mobs_npc:npc", {
 		-- by right-clicking owner can switch npc between follow, wander and stand
 		if self.owner and self.owner == name then
 			minetest.show_formspec(name, "mobs_npc:controls", get_npc_controls_formspec(name,self) )
-		elseif useDialogs=="Y" then simple_dialogs.show_dialog_formspec(name,self) 
+		elseif useDialogs=="Y" then simple_dialogs.show_dialog_formspec(name,self)
 		end
 	end
 })
@@ -198,16 +193,14 @@ function get_npc_controls_formspec(name,self)
 	local orderArray={"wander","stand","follow"}
 	local currentorderidx=1
 	for i = 1, 3 do  --this seems like a clumsy way to do this
-		if orderArray[i] == currentordermode then 
+		if orderArray[i] == currentordermode then
 			currentorderidx = i
 			break
 		end
 	end
 	--
-	-- Make npc controls formspec 
+	-- Make npc controls formspec
 	local text = "NPC Controls"
-	local dialogtext=""
-	--if self.dialogtext then dialogtext=self.dialogtext end
 	local size="size[3.75,2.8]"
 	if useDialogs=="Y" then size="size[15,10]" end
 	local formspec = {
@@ -226,9 +219,9 @@ end
 
 minetest.register_on_player_receive_fields(function(player, formname, fields)
 	local pname = player:get_player_name()
-	if formname ~= "mobs_npc:controls" then 
+	if formname ~= "mobs_npc:controls" then
 		if context[pname] then context[pname]=nil end
-		return 
+		return
 	end
 	--
 	local npcId=context[pname] or nil --get the npc id from local context
@@ -239,7 +232,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		elseif fields["ordermode"] then
 			minetest.chat_send_all("received ordermode")
 			local pname = player:get_player_name()
-			npcself.order=fields["ordermode"]		
+			npcself.order=fields["ordermode"]
 			if npcself.order == "wander" then
 				minetest.chat_send_player(pname, S("NPC will wander."))
 			elseif npcself.order == "stand" then
@@ -260,8 +253,6 @@ end)
 
 --this function checks to see if an entity already has an id field
 --if it does not, it creates one
---the format of npcid was inherited from mobs_npc, which inherited it from something else
---and it may change in the future (Which should have no impact on anything) 
 function set_npc_id(npcself)
 	if not npcself.id then
 		npcself.id = (math.random(1, 1000) * math.random(1, 10000))
@@ -282,7 +273,7 @@ function get_npcself_from_id(npcId)
 			end --if
 		end --for
 	end --else
-end 
+end
 
 
 

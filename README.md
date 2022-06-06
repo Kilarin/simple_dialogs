@@ -335,12 +335,73 @@ And THEN execute the set command, so in the end it would actually be doing:
 When you want to reference a variable name, do not use at brackets.
 When you want to replace a variable with it's value, use at brackets.
 
-## CONCLUSION ##
+---
+## Integrating simple_dialogs with an entity mod ##
 
-combining topics, commands, and replies can allow you to create some really complex simple_dialogs.  (yes, just wallow in the oxymoron and enjoy it!)
+simple_dialogs is NOT a stand alone entity mod.  It just does the dialogs.  It needs to be integrated into an existing entity mod.  
+So, how do we do that?
 
+Lets start by detecting whether simple_dialogs exists (the entity mod should run fine without simple_dialogs)
+To do that, add the following near the top of your entity mod:
 
+```
+local useDialogs="N"
+if (minetest.get_modpath("simple_dialogs")) then
+	useDialogs="Y"
+end
+```
 
+We will be adding some more here later, but this is enough for now.  
 
+### Add simple_dialog controls to the NPC right click menu ###
 
+There are two simple_dialogs right click menus.  One for the simple_dialog controls, where the owner can create and test a dialog.  And another for non-owners where we actually display the dialog conversation to another player.  Both are pretty easy to add.  But there are two ways to do it, depending on whether your entity already has a right click menu for owners or not.
+
+#### If the entity mod does not already have a right click menu for owners ####
+
+Just add the simple_dialogs right click menu, something like this:
+
+```
+  on_rightclick = function(self, clicker)
+    self.id=set_npc_id(self)  --you must set self.id to some kind of unique string for simple_dialogs to work
+...
+  -- if simple_dialogs is present, then show right click menus
+  if useDialogs=="Y" then 
+    if self.owner and self.owner == name then
+      simple_dialogs.show_dialog_controls_formspec(name,self)
+    else simple_dialogs.show_dialog_formspec(name,self)
+    end --if self.owner
+  end --if useDialogs
+```
+
+simple_dialogs will take care of the register_on_player_receive_fields for you.
+
+#### if the entity mod already has a right click menu  for owners ####
+
+Then you just want to add the simple_dialogs contols to your already existing formspec.  And this is actually pretty easy to do:
+
+Here is an example of an existing right click npc owner menu that has simple_dialogs controls added to it:
+
+|-----------------------------------------------|
+| adding simple_dialogs to existing formspec    |
+|-----------------------------------------------|
+|function get_npc_controls_formspec(name,self)                                                                           |
+|	...                                                                                                                    |
+|	-- Make npc controls formspec                                                                                          |
+|	local text = "NPC Controls"                                                                                            |
+|	local size="size[3.75,2.8]"                                                                                            |
+|	**if useDialogs=="Y" then size="size[15,10]" end**                                                                     |
+|	local formspec = {                                                                                                     |
+|		size,                                                                                                                |
+|		"label[0.375,0.5;", minetest.formspec_escape(text), "]",                                                             |
+|		"dropdown[0.375,1.25; 3,0.6;ordermode;wander,stand,follow;",currentorderidx,"]",                                     |
+|		"button[0.375,2;3,0.8;exit;Exit]"                                                                                    |
+|		}                                                                                                                    |
+|	**if useDialogs=="Y" then simple_dialogs.add_dialog_control_to_formspec(name,self,formspec,0.375,3.4) end **           |
+|	table.concat(formspec, "")                                                                                             |
+|	context[name]=npcId --store the npc id in local context so we can use it when the form is returned.  (cant store self) |
+|	return table.concat(formspec, "")                                                                                      |
+|end
+
+Note that only two lines had to be added here.
 
