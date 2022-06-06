@@ -475,10 +475,10 @@ if (minetest.get_modpath("simple_dialogs")) then
 Hook functions let you add further functionality to simple_dialogs.  The below example allows npc's who's owner has the teleport priv, to teleport players during a conversation.  Again, we place this within the same paragraph where we previously set the useDialogs flag.
 
 <pre>
-local useDialogs="N"
+<i>local useDialogs="N"
 if (minetest.get_modpath("simple_dialogs")) then
   useDialogs="Y"
-    ...
+    ...</i>
     <b>simple_dialogs.register_hook(function(npcself,playername,hook)
     if hook.func=="TELEPORT" then
       if npcself.owner then
@@ -505,7 +505,7 @@ if (minetest.get_modpath("simple_dialogs")) then
     return "EXIT"
     end --if hook.func
   end)--register_hook</b>
-end --if simple_dialogs
+<i>end --if simple_dialogs</i>
 </pre>
 
 Another good example of a hook might be to initiate a trade dialog.  Or even to switch the npc into hostile mode and cause it to start attacking.  
