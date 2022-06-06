@@ -382,26 +382,25 @@ Then you just want to add the simple_dialogs contols to your already existing fo
 
 Here is an example of an existing right click npc owner menu that has simple_dialogs controls added to it:
 
-|-----------------------------------------------|
-| adding simple_dialogs to existing formspec    |
-|-----------------------------------------------|
-|function get_npc_controls_formspec(name,self)                                                                           |
-|	...                                                                                                                    |
-|	-- Make npc controls formspec                                                                                          |
-|	local text = "NPC Controls"                                                                                            |
-|	local size="size[3.75,2.8]"                                                                                            |
-|	**if useDialogs=="Y" then size="size[15,10]" end**                                                                     |
-|	local formspec = {                                                                                                     |
-|		size,                                                                                                                |
-|		"label[0.375,0.5;", minetest.formspec_escape(text), "]",                                                             |
-|		"dropdown[0.375,1.25; 3,0.6;ordermode;wander,stand,follow;",currentorderidx,"]",                                     |
-|		"button[0.375,2;3,0.8;exit;Exit]"                                                                                    |
-|		}                                                                                                                    |
-|	**if useDialogs=="Y" then simple_dialogs.add_dialog_control_to_formspec(name,self,formspec,0.375,3.4) end **           |
-|	table.concat(formspec, "")                                                                                             |
-|	context[name]=npcId --store the npc id in local context so we can use it when the form is returned.  (cant store self) |
-|	return table.concat(formspec, "")                                                                                      |
-|end
+<pre>
+function get_npc_controls_formspec(name,self)
+	...
+	-- Make npc controls formspec
+	local text = "NPC Controls"
+	local size="size[3.75,2.8]"
+	<b>if useDialogs=="Y" then size="size[15,10]" end</b>
+	local formspec = {
+		size,
+		"label[0.375,0.5;", minetest.formspec_escape(text), "]",
+		"dropdown[0.375,1.25; 3,0.6;ordermode;wander,stand,follow;",currentorderidx,"]",
+		"button[0.375,2;3,0.8;exit;Exit]"
+		}
+	<b>if useDialogs=="Y" then simple_dialogs.add_dialog_control_to_formspec(name,self,formspec,0.375,3.4) end</b>
+	table.concat(formspec, "")
+	context[name]=npcId --store the npc id in local context so we can use it when the form is returned.  (cant store self)
+	return table.concat(formspec, "")
+end
+</pre>
 
 Note that only two lines had to be added here.
 
