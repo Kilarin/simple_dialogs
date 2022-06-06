@@ -460,13 +460,13 @@ Here is an example, note that we placed it within the same paragraph where we pr
 local useDialogs="N"
 if (minetest.get_modpath("simple_dialogs")) then
   useDialogs="Y"
-    <b><font color="blue">simple_dialogs.register_varloader(function(npcself,playername)
+    <b><p color="blue">simple_dialogs.register_varloader(function(npcself,playername)
     simple_dialogs.save_dialog_var(npcself,"NPCNAME",npcself.nametag,playername)
     simple_dialogs.save_dialog_var(npcself,"STATE",npcself.state,playername)
     simple_dialogs.save_dialog_var(npcself,"FOOD",npcself.food,playername)
     simple_dialogs.save_dialog_var(npcself,"HEALTH",npcself.health,playername)
     simple_dialogs.save_dialog_var(npcself,"owner",npcself.owner,playername)
-  end)--register_varloader</font></b>
+  end)--register_varloader</p></b>
 end --if simple_dialogs  
 </pre>
 
