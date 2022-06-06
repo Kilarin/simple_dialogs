@@ -365,8 +365,15 @@ All of this should be ignored and none of it should cause a crash
 :if (@[doesnotexist]@==flaming@[doesnotexist]@@[var2]@@[var5]@ calc(3/0)) then
 :if () then set x=3
 :if then
-:if (1=1) then goto
-:if (1=1) then goto topicdoesnotexist
+:if (1==1) then goto
+:if (1==1) then goto topicdoesnotexist
+:if ( then set x=only open paren
+:if ) then set x=only close paren
+:if (badcondition) then set x=bad condition
+:if )()( then set x=bad parens
+:if (1=1) then set x=bad operator
+:if (1==1) then
+:if (1==1) set x=no then
 :goto
 :goto topicdoesnotexist
 :set test=exists(
@@ -389,3 +396,10 @@ What happens if you have a topic with no replies?
 ===topicwithnodialog
 >errors:@[ranerrors]@ back to primary error dialog
 >begin:Back to the begining
+
+===topicwithbadweight(not a number)
+===topicwithbadweight(23
+===topicwithbadweight(
+===topicwithbadweight()
+===topicwithbadweight)
+these will crash on load, if they are going to crash.  If it works correctly the weights should just be ignored.

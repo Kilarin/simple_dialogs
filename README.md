@@ -336,18 +336,26 @@ When you want to reference a variable name, do not use at brackets.
 When you want to replace a variable with it's value, use at brackets.
 
 ---
+---
+---
 ## Integrating simple_dialogs with an entity mod ##
 
 simple_dialogs is NOT a stand alone entity mod.  It just does the dialogs.  It needs to be integrated into an existing entity mod.  
 So, how do we do that?
 
-Lets start by detecting whether simple_dialogs exists (the entity mod should run fine without simple_dialogs)
+First, of course, you need to add simple_dialogs to your entity mods depends.txt as a soft dependency:
+
+```
+smart_dialogs?
+```
+
+Now, we start by detecting whether simple_dialogs exists (the entity mod should run fine without simple_dialogs)
 To do that, add the following near the top of your entity mod:
 
 ```
 local useDialogs="N"
 if (minetest.get_modpath("simple_dialogs")) then
-	useDialogs="Y"
+  useDialogs="Y"
 end
 ```
 
@@ -356,6 +364,7 @@ We will be adding some more here later, but this is enough for now.
 ### Add simple_dialog controls to the NPC right click menu ###
 
 There are two simple_dialogs right click menus.  One for the simple_dialog controls, where the owner can create and test a dialog.  And another for non-owners where we actually display the dialog conversation to another player.  Both are pretty easy to add.  But there are two ways to do it, depending on whether your entity already has a right click menu for owners or not.
+(the following examples are from testing with TenPlus1's mobs_redo mobs_npc entity mod)
 
 #### If the entity mod does not already have a right click menu for owners ####
 
@@ -384,23 +393,131 @@ Here is an example of an existing right click npc owner menu that has simple_dia
 
 <pre>
 function get_npc_controls_formspec(name,self)
-	...
-	-- Make npc controls formspec
-	local text = "NPC Controls"
-	local size="size[3.75,2.8]"
-	<b>if useDialogs=="Y" then size="size[15,10]" end</b>
-	local formspec = {
-		size,
-		"label[0.375,0.5;", minetest.formspec_escape(text), "]",
-		"dropdown[0.375,1.25; 3,0.6;ordermode;wander,stand,follow;",currentorderidx,"]",
-		"button[0.375,2;3,0.8;exit;Exit]"
-		}
-	<b>if useDialogs=="Y" then simple_dialogs.add_dialog_control_to_formspec(name,self,formspec,0.375,3.4) end</b>
-	table.concat(formspec, "")
-	context[name]=npcId --store the npc id in local context so we can use it when the form is returned.  (cant store self)
-	return table.concat(formspec, "")
+  ...
+  -- Make npc controls formspec
+  local text = "NPC Controls"
+  local size="size[3.75,2.8]"
+  <b>if useDialogs=="Y" then size="size[15,10]" end</b>
+  local formspec = {
+    size,
+    "label[0.375,0.5;", minetest.formspec_escape(text), "]",
+    "dropdown[0.375,1.25; 3,0.6;ordermode;wander,stand,follow;",currentorderidx,"]",
+    "button[0.375,2;3,0.8;exit;Exit]"
+    }
+  <b>if useDialogs=="Y" then simple_dialogs.add_dialog_control_to_formspec(name,self,formspec,0.375,3.4) end</b>
+  table.concat(formspec, "")
+  context[name]=npcId --store the npc id in local context so we can use it when the form is returned.  (cant store self)
+  return table.concat(formspec, "")
 end
 </pre>
 
-Note that only two lines had to be added here.
+Note that only two lines had to be added here.  We changed the size to accomodate the new controls, and just used add_dialog_control_to_formspec to add the dialog controls to the existing formspec.
+Our final on_rightclick function looks very similar to the one where we did not have an existing owner formspec:
+
+```
+  on_rightclick = function(self, clicker)
+    self.id=set_npc_id(self)  --you must set self.id to some kind of unique string for simple_dialogs to work
+...
+    if self.owner and self.owner == name then
+      minetest.show_formspec(name, "mobs_npc:controls", get_npc_controls_formspec(name,self) )
+    elseif useDialogs=="Y" then simple_dialogs.show_dialog_formspec(name,self)
+    end
+```    
+
+### register a var loader ###
+
+This next step is enitrely optional.  If there are any entity mod variables you want to make available within simple_dialogs, you will need to register a varloader function.  And within that varloader function, call simple_dialogs.save_dialog_var to save the value into the npc simple_dialogs variable list.  
+
+Here is an example, note that we placed it within the same paragraph where we previously set the useDialogs flag.
+
+<pre>
+local useDialogs="N"
+if (minetest.get_modpath("simple_dialogs")) then
+  useDialogs="Y"
+    <b>simple_dialogs.register_varloader(function(npcself,playername)
+    simple_dialogs.save_dialog_var(npcself,"NPCNAME",npcself.nametag,playername)
+    simple_dialogs.save_dialog_var(npcself,"STATE",npcself.state,playername)
+    simple_dialogs.save_dialog_var(npcself,"FOOD",npcself.food,playername)
+    simple_dialogs.save_dialog_var(npcself,"HEALTH",npcself.health,playername)
+    simple_dialogs.save_dialog_var(npcself,"owner",npcself.owner,playername)
+  end)--register_varloader</b>
+end --if simple_dialogs  
+<pre>
+
+### register any hook functions ###
+
+Hook functions let you add further functionality to simple_dialogs.  The below example allows npc's who's owner has the teleport priv, to teleport players during a conversation.  Again, we place this within the same paragraph where we previously set the useDialogs flag.
+
+<pre>
+local useDialogs="N"
+if (minetest.get_modpath("simple_dialogs")) then
+  useDialogs="Y"
+    ...
+    <b>simple_dialogs.register_hook(function(npcself,playername,hook)
+    if hook.func=="TELEPORT" then
+      if npcself.owner then
+        --check to see if the npc owner has teleport privliges
+        local player_privs = minetest.get_player_privs(npcself.owner)
+        if player_privs["teleport"] then
+          --validate x,y,z coords
+          if hook.parm and hook.parmcount and hook.parmcount>2 then
+            local pos={}
+            pos.x=tonumber(hook.parm[1])
+            pos.y=tonumber(hook.parm[2])
+            pos.z=tonumber(hook.parm[3])
+            if pos.x and pos.y and pos.z and
+              pos.x>-31500 and pos.x<31500 and
+              pos.y>-31500 and pos.y<31500 and
+              pos.z>-31500 and pos.z<31500 then
+              local player = minetest.get_player_by_name(playername)
+              if player then
+                player:set_pos(pos) end
+            end --if tonumber
+          end --if hook.parm
+        end --if player_privs
+      end --if npcself.owner
+    return "EXIT"
+    end --if hook.func
+  end)--register_hook</b>
+end --if simple_dialogs
+</pre>
+
+Another good example of a hook might be to initiate a trade dialog.  Or even to switch the npc into hostile mode and cause it to start attacking.  
+simple_dialogs do not allow players to actually change anything outside of the dialog itself.  Which makes it quite secure.  Hooks let the entity mob give npcs more interactive things they can do.  But the security of that function rest entirely upon the entity mod.  
+
+---
+---
+---
+## The Security Of simple_dialogs ##
+
+I have attempted to make simple_dialogs VERY secure.  The players have no access to lua.  The calc function DOES make use of loadstring.  But before loadstring is run, the input string is filtered to remove characters except for numbers and the characters ".+-*/^()".  Furthermore, the call to loadstring is sandboxed so that it has no access to any lua functions outside of loadstring itself.  I believe this should keep the function quite secure.  If anyone knows otherwise, PLEASE let me know.
+
+I've also tried to code simple_dialogs to be crash proof.  Bad formating in a dialog should NEVER cause a server crash.  It should just result in a dialog that doesn't actually do anything.  Load the dialog in the file sd-test-npc.txt into an npc and run through the tests there.  It should NOT crash on any of them.
+
+---
+---
+---
+## What still needs to be done? ##
+
+I don't think I have properly integrated intllib for translating.  Any help on that would be greatly appreciated.
+
+The parser that simple_dialogs uses is rather primitive.  It doesn't handle quotes, and it has no way to escape special characters.  Now, in general, this doesn't matter.  It's just a dialog processor, its pretty unlikely anyone will be stretching it to the point that these things matter.  BUT, there is certainly room to improve it.
+
+The :if command could probably use an else statement.  It's not necessary, but it would be nice.
+
+I considered adding a "comment" indicator.  It would be very easy, but I'm not certain how useful it would be.
+
+The formspec is functional, but rather boring.  If someone wanted to help me spice it up I would be grateful.
+
+Lots of testing and feedback would be greatly appreciated.
+
+## Credit Where Credit Is Due ##
+
+I was about half-way through this project, and struggling with the gui.  I wanted the player to be able to see the npc while they were talking to them.  This required either putting the formspec on one side, which left it more narrow than I wanted for replies.  Or I could stretch the dialog formspec across the bottom half of the screen, which was great for replies, but didn't look very good for the npc's part of the dialog.
+
+So, I decided to take a break an log on to a multi-player server.  I had been on the "Your Land" server in the past, but only briefly.  This time I spent a bit more time exploring and discovered that they already had npc's with dialogs!  Theirs, I believe, operate via a lua api, so I think they are very different from this code. 
+The one thing I DID notice, was their gui.  They were using a transparent background for the formspec so that they could have the npc dialog part of the formspec off to one side, and the replies down below.  I didn't even know that was POSSIBLE.  So, I went back to work on my mod, figured out (with some help on the forum) how to do a formspec with a transparent background, and thus you get the formspec in it's current form.
+I've never seen the code for the npc's that is used on Your Land, and I don't even know who the coder is that I should credit, but I definitly borrowed a design element from them, and so, Thank you!
+
+
 
