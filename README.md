@@ -1,8 +1,10 @@
 # Simple_Dialogs for Minetest entities
 *** version 0.1 ***
+
 ##### This mod allows you to add dialogs for npcs and other entities, controlled by an in game text file.
 
 ## License
+By Kilarin
 This code is licensed under the MIT License
 
 ![](https://i.imgur.com/ErgHNQP.png)
