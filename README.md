@@ -1,12 +1,9 @@
 # Simple_Dialogs for Minetest entities
 *** version 0.1 ***
 
-##### This mod allows you to add dialogs for npcs and other entities, controlled by an in game text file.
-
-## License
 By Kilarin
 
-This code is licensed under the MIT License
+##### This mod allows you to add dialogs for npcs and other entities, controlled by an in game text file.
 
 ![](https://i.imgur.com/ErgHNQP.png)
 
@@ -552,5 +549,6 @@ So, I decided to take a break and log on to a multi-player minetest server and j
 The one thing I DID notice, was their gui.  They were using a transparent background for the formspec so that they could have the npc dialog part of the formspec off to one side, and the replies down below.  I didn't even know that was POSSIBLE.  So, I went back to work on my mod, figured out (with some help on the forum) how to do a formspec with a transparent background, and thus you get the formspec in it's current form.
 I've never seen the code for the npcs that is used on Your Land, and I don't even know who the coder is that I should credit, but I definitly borrowed a design element from them, and so, Thank you!
 
-
+## License
+This code is licensed under the MIT License
 
