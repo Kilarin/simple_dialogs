@@ -269,20 +269,21 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr)
 		--minetest.log("simple_dialogs->ldfs firstchar="..firstchar.." #firstchar="..#firstchar)
 		if firstchar == chars.topic then  --we found a topic, process it
 			simple_dialogs.load_dialog_topic(wk)
-		elseif firstchar == chars.reply and wk.topic ~= "" then  --we found a reply, process it
-			simple_dialogs.load_dialog_reply(wk)
-		elseif firstchar==":" and #wk.line>1 then --commands
-			--minetest.log("simple_dialogs->ldfs : line="..wk.line)
-			local newcmnd=simple_dialogs.load_dialog_cmnd(string.sub(wk.line,2))
-			if newcmnd then
-				local cmndcount=#wk.dlg[wk.topic][wk.subtopic].cmnd+1
-				wk.dlg[wk.topic][wk.subtopic].cmnd[cmndcount]=newcmnd 
-			end --if newcmnd
-		--we check that a topic is set to avoid errors, just in case they put text before the first topic
-		--we check that replycount=0 because we are going to ignore any text between the replies and the next topic
-		elseif wk.topic~="" and #wk.dlg[wk.topic][wk.subtopic].reply==0 then  --we found a dialog line, process it
-			wk.dlg[wk.topic][wk.subtopic].say=wk.dlg[wk.topic][wk.subtopic].say..wk.line.."\n"
-		end
+		elseif wk.topic ~="" then  --don't do anything until we actually have a topic.
+			if firstchar == chars.reply then  --we found a reply, process it
+				simple_dialogs.load_dialog_reply(wk)
+			elseif firstchar==":" and #wk.line>1 then --commands
+				--minetest.log("simple_dialogs->ldfs : line="..wk.line)
+				local newcmnd=simple_dialogs.load_dialog_cmnd(string.sub(wk.line,2))
+				if newcmnd then
+					local cmndcount=#wk.dlg[wk.topic][wk.subtopic].cmnd+1
+					wk.dlg[wk.topic][wk.subtopic].cmnd[cmndcount]=newcmnd 
+				end --if newcmnd
+			--we check that replycount=0 because we are going to ignore any text between the replies and the next topic
+			elseif #wk.dlg[wk.topic][wk.subtopic].reply==0 then  --we found a dialog line, process it
+				wk.dlg[wk.topic][wk.subtopic].say=wk.dlg[wk.topic][wk.subtopic].say..wk.line.."\n"
+			end --if firstchar == chars.reply
+		end --if firstchar == chars.topic
 	end --for line in dialog
 	--now double check that every entry has at least 1 reply
 	for t,v in pairs(wk.dlg) do
@@ -307,21 +308,20 @@ end --load_dialog_from_string
 --=topicname(weight)
 --weight is optional, and there can be any number of equal signs
 function simple_dialogs.load_dialog_topic(wk)
-	wk.topic=wk.line  --this might still include weight, = signs will be stripped off when we filter
-	--get the weight from parenthesis
-	wk.weight=1
-	local i, j = string.find(wk.line,"%(") --look for open parenthesis
-	local k, l = string.find(wk.line,"%)") --look for close parenthesis
-	--if ( and ) both exist, and the ) is after the (
-	if i and i>0 and k and k>i then --found weight
-		wk.topic=string.sub(wk.line,1,i-1) --cut the (weight) out of the topicname
-		local w=string.sub(wk.line,i+1,k-1) --get the number in parenthesis (weight)
-		wk.weight=tonumber(w)
-		if wk.weight==nil or wk.weight<1 then wk.weight=1 end
-		--minetest.log("simple_dialogs->ldt line="..wk.line.." topic="..wk.topic.." i="..i.." k="..k.." w="..w)
-	end
 	--strip topic down to only allowed characters
-	wk.topic=simple_dialogs.topic_filter(wk.topic) --this also strips all leading = signs
+	wk.topic=simple_dialogs.topic_filter(wk.line) --strips weight and also strips all leading = signs
+	wk.weight=1  --default weight
+	--get the weight from parenthesis
+	local grouping=simple_dialogs.build_grouping_list(wk.line,"(",")") --find parenthesis
+	--minetest.log("simple_dialogs->ldt wk.===line="..wk.line.." grouping.first="..grouping.first.."<")
+	if grouping.first>0 then --we found a parentesis pair!
+		local w=simple_dialogs.grouping_section(grouping,grouping.first,"EXCLUSIVE")  --get the value in the first parenthesis
+		wk.weight=tonumber(w)
+		--minetest.log("simple_dialogs->ldt weight wk.line="..wk.line.." w="..dump(w).."<")
+		--wk.weight~=wk.weight checks for nan (not a number)
+		if wk.weight==nil or wk.weight<1 or wk.weight~=wk.weight then wk.weight=1 end
+	end --if grouping.first>0
+	--minetest.log("simple_dialogs->ldt weight wk.line="..wk.line.." wk.weight="..wk.weight.."<")
 	wk.subtopic=1
 	if wk.dlg[wk.topic] then --existing topic
 		--minetest.log("simple_dialogs->ldt topic="..wk.topic.." subtopic="..wk.subtopic)
@@ -337,6 +337,7 @@ function simple_dialogs.load_dialog_topic(wk)
 	wk.dlg[wk.topic][wk.subtopic].weight=wk.weight
 	wk.dlg[wk.topic][wk.subtopic].reply={}
 	wk.dlg[wk.topic][wk.subtopic].cmnd={}
+	--minetest.log("simple_dialogs->ldt final wk.dlg["..wk.topic.."]["..wk.subtopic.."]="..dump(wk.dlg[wk.topic][wk.subtopic]))
 end --load_dialog_topic
 
 
@@ -1083,6 +1084,14 @@ more simple_dialog specific utilities
 
 --topics will be upper cased, and have all characters stripped except for letters, digits, dash, and underline
 function simple_dialogs.topic_filter(topicin)
+	--first thing we do is chop off anything after a parenthesis (to remove weights)
+	--do NOT use grouping.list[grouping.first].open to strip the weight off the topic, 
+	--because grouping will ignore unclosed parens
+	--and we would prefer to just cut everything after the first open paren
+	if not topicin then topicin="" end
+	local i, j = string.find(topicin,"%(") --get first open parenthesis
+	if i then topicin=string.sub(topicin,1,i-1) end --strip off anything after open paren
+	--strip topic down to only allowed characters
 	local allowedchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_%-" --characters allowed in dialog topics %=escape
 	return string.upper(topicin):gsub("[^" .. allowedchars .. "]", "")
 end --topic_filter

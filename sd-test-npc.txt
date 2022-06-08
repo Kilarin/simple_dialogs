@@ -1,3 +1,7 @@
+:set x=command before topic should not crash
+>reply:reply before topic should not crash
+other lines before topic should not crash
+
 ===start
 start is just used to set up some variables
 :set angry=Y
@@ -23,6 +27,13 @@ start is just used to set up some variables
 :set ransomeplaceelse=
 :set rangotoloop=
 :set ranfunctions=
+:set ranbadweight1=
+:set ranbadweight2=
+:set ranbadweight3=
+:set ranbadweight4=
+:set ranbadweight5=
+:set ranbadweight=
+:set rantopicwithnodialog=
 :set ranerrors=
 :goto begin
 
@@ -36,13 +47,14 @@ Chose a reply to test various aspects of simple dialogs
 :if ((@[ranbasiciftest]@==*) and (@[ranifgoto]@==*)) then set raniftest=*
 :if ((@[ranpuppy]@==*) and (@[rantreasuremap]@==*)) then set ranweight=*
 :if ((@[ransomeplaceelse]@==*) and (@[rangotoloop]@==*)) then set rangoto=*
+:if ((@[rantopicwithnodialog]@==*) and (@[ranbadweight]@==*) then set ranerrors=*
 >vartest:@[ranvartest]@ Test variables
 >iftest:@[raniftest]@ Test :If to set things conditionaly based on variables values
 >weight:@[ranweight]@ Test multiple possible outcomes (weighted topics)
 >gototest:@[rangoto]@ Test GOTO functionality
 >functions:@[ranfunctions]@ Test functions
->hooks:Test Hooks
 >errors:@[ranerrors]@ Test to see if we can make simple_dialogs crash?
+>hooks:Test Hooks
 
 --------------------------------------------
 
@@ -382,26 +394,77 @@ All of this should be ignored and none of it should cause a crash
 :set test=yesno()
 :set test=yesno(calc(5/0))
 :set test=yesno(calc(3+2))
-:set ranerrors=*
->topicwithnodialog:Test if a topic with no dialog will crash
+>topicwithnodialog:@[rantopicwithnodialog]@ Test if a topic with no dialog will crash
+>topicwithbadweight:@[ranbadweight]@ Test a topic with a bad weight (there are 5 of them)
 >topicwithnoreplies:Test if a topic with no replies will crash (you will not be able to return)
 >topicwithnothing:Test if a topic with nothing in it at all will crash (you will not be able to return)
+>topicwithcommandsbutnodialog: Test if a topic with commands but no dialog or replies will crash (you will not be able to return)
 >doesnotexist:Test if a reply target pointing at a topic that does not exist will crash. (you will not be able to return)
+>topicwithnothingeof:Test a topic at the end of file (you will not be able to return)
 >begin:Back to the begining
+>End
+>begin:replies below this point test various bad replies
+>
+>:
+>:reply but no target before the colon
+>target but no colon
 >End
 
 ===topicwithnoreplies
 What happens if you have a topic with no replies?
 (an END reply is automagically added)
-
 ===topicwithnothing
 ===topicwithnodialog
+:set rantopicwithnodialog=*
 >errors:@[ranerrors]@ back to primary error dialog
 >begin:Back to the begining
-
+>end:end
+===topicwithcommandsbut no dialog
+:set x=3
+===topicwithboth commands and replies but no dialog
+:set x=4
+>errors:@[ranerrors]@ back to primary error dialog
+>begin:Back to the begining
+>end:end
 ===topicwithbadweight(not a number)
+1 of 5, This topic had a weight of (not a number)
+:set ranbadweight1=*
+:if (@[ranbadweight1]@@[ranbadweight2]@@[ranbadweight3]@@[ranbadweight4]@@[ranbadweight5]@==*****) then set ranbadweight=*
+>topicwithbadweight:@[ranbadweight]@ Test a topic with a bad weight (there are 5 of them)
+>errors:@[ranerrors]@ back to primary error dialog
+>begin:Back to the begining
+>end:end
 ===topicwithbadweight(23
+2 of 5, This topic had a weight of (23
+:set ranbadweight2=*
+:if (@[ranbadweight1]@@[ranbadweight2]@@[ranbadweight3]@@[ranbadweight4]@@[ranbadweight5]@==*****) then set ranbadweight=*
+>topicwithbadweight:@[ranbadweight]@ Test a topic with a bad weight (there are 5 of them)
+>errors:@[ranerrors]@ back to primary error dialog
+>begin:Back to the begining
+>end:end
 ===topicwithbadweight(
+3 of 5, This topic had a weight of (
+:set ranbadweight3=*
+:if (@[ranbadweight1]@@[ranbadweight2]@@[ranbadweight3]@@[ranbadweight4]@@[ranbadweight5]@==*****) then set ranbadweight=*
+>topicwithbadweight:@[ranbadweight]@ Test a topic with a bad weight (there are 5 of them)
+>errors:@[ranerrors]@ back to primary error dialog
+>begin:Back to the begining
+>end:end
 ===topicwithbadweight()
+:set ranbadweight4=*
+:if (@[ranbadweight1]@@[ranbadweight2]@@[ranbadweight3]@@[ranbadweight4]@@[ranbadweight5]@==*****) then set ranbadweight=*
+4 of 5, This topic had a weight of ()
+>topicwithbadweight:@[ranbadweight]@ Test a topic with a bad weight (there are 5 of them)
+>errors:@[ranerrors]@ back to primary error dialog
+>begin:Back to the begining
+>end:end
 ===topicwithbadweight)
-these will crash on load, if they are going to crash.  If it works correctly the weights should just be ignored.
+:set ranbadweight5=*
+:if (@[ranbadweight1]@@[ranbadweight2]@@[ranbadweight3]@@[ranbadweight4]@@[ranbadweight5]@==*****) then set ranbadweight=*
+5 of 5, This topic had a weight of )
+If this works correctly the weights should just be ignored.
+>topicwithbadweight:@[ranbadweight]@ Test a topic with a bad weight (there are 5 of them)
+>errors:@[ranerrors]@ back to primary error dialog
+>begin:Back to the begining
+>end:end
+===topicwithnothingeof
