@@ -5,13 +5,13 @@ By Kilarin
 
 ##### This mod allows you to add dialogs for npcs and other entities, controlled by an in game text file.
 
-source: ![](https://github.com/Kilarin/simple_dialogs/)
+source: <https://github.com/Kilarin/simple_dialogs/>
 
 ![](https://i.imgur.com/ErgHNQP.png)
 
 Simple Dialogs is NOT a stand alone entity mod, rather it is an add on that is designed to be (rather easily) integrated with other entity mods.
 TenPlus1 has very generously already integrated simple_dialogs into his mobs_redo/mobs_npcs.  So if you wish to try it out you can use his mod:
-![](https://notabug.org/TenPlus1/mobs_redo) ![](https://notabug.org/TenPlus1/mobs_npc)
+<https://notabug.org/TenPlus1/mobs_redo>  <https://notabug.org/TenPlus1/mobs_npc>
 
 Simple Dialogs allows you to create conversation trees (dialogs) for any entity.  And those dialogs are created using only a simple in game text file.  No API or LUA programming required.
 
@@ -363,11 +363,11 @@ When you want to replace a variable with it's value, use at brackets.
 
 Combining topics, commands, and replies can allow you to create some really complex simple_dialogs.  (yes, just wallow in the oxymoron and enjoy it!)
 You can find some example dialog scripts in the simple_dialogs mod folder.  They are all have names in the format of sd-*.txt
-![](https://github.com/Kilarin/simple_dialogs)
-![](https://github.com/Kilarin/simple_dialogs)
-![](https://github.com/Kilarin/simple_dialogs/blob/main/sd-guard.txt)
-![](https://github.com/Kilarin/simple_dialogs/blob/main/sd-pirate.txt)
-![](https://github.com/Kilarin/simple_dialogs/blob/main/sd-test-npc.txt)
+<https://github.com/Kilarin/simple_dialogs>
+<https://github.com/Kilarin/simple_dialogs>
+<https://github.com/Kilarin/simple_dialogs/blob/main/sd-guard.txt>
+<https://github.com/Kilarin/simple_dialogs/blob/main/sd-pirate.txt>
+<https://github.com/Kilarin/simple_dialogs/blob/main/sd-test-npc.txt>
 
 ---
 ---
