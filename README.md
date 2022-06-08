@@ -492,7 +492,7 @@ if (minetest.get_modpath("simple_dialogs")) then
   useDialogs="Y"
     ...</i>
     <b>simple_dialogs.register_hook(function(npcself,playername,hook)
-    if hook.func=="TELEPORT" then
+    if hook.func=="bring" then
       if npcself.owner then
         --check to see if the npc owner has teleport privliges
         local player_privs = minetest.get_player_privs(npcself.owner)
