@@ -5,9 +5,13 @@ By Kilarin
 
 ##### This mod allows you to add dialogs for npcs and other entities, controlled by an in game text file.
 
+source: ![](https://github.com/Kilarin/simple_dialogs/)
+
 ![](https://i.imgur.com/ErgHNQP.png)
 
 Simple Dialogs is NOT a stand alone entity mod, rather it is an add on that is designed to be (rather easily) integrated with other entity mods.
+TenPlus1 has very generously already integrated simple_dialogs into his mobs_redo/mobs_npcs.  So if you wish to try it out you can use his mod:
+![](https://notabug.org/TenPlus1/mobs_redo) ![](https://notabug.org/TenPlus1/mobs_npc)
 
 Simple Dialogs allows you to create conversation trees (dialogs) for any entity.  And those dialogs are created using only a simple in game text file.  No API or LUA programming required.
 
@@ -359,7 +363,11 @@ When you want to replace a variable with it's value, use at brackets.
 
 Combining topics, commands, and replies can allow you to create some really complex simple_dialogs.  (yes, just wallow in the oxymoron and enjoy it!)
 You can find some example dialog scripts in the simple_dialogs mod folder.  They are all have names in the format of sd-*.txt
-https://github.com/Kilarin/simple_dialogs
+![](https://github.com/Kilarin/simple_dialogs)
+![](https://github.com/Kilarin/simple_dialogs)
+![](https://github.com/Kilarin/simple_dialogs/blob/main/sd-guard.txt)
+![](https://github.com/Kilarin/simple_dialogs/blob/main/sd-pirate.txt)
+![](https://github.com/Kilarin/simple_dialogs/blob/main/sd-test-npc.txt)
 
 ---
 ---
@@ -367,7 +375,7 @@ https://github.com/Kilarin/simple_dialogs
 
 ## Integrating simple_dialogs with an entity mod
 
-simple_dialogs is NOT a stand alone entity mod.  It just does the dialogs.  It needs to be integrated into an existing entity mod.  
+simple_dialogs is NOT a stand alone entity mod.  It just does the dialogs.  It needs to be integrated into an existing entity mod.
 So, how do we do that?
 
 First, of course, you need to add simple_dialogs to your entity mods depends.txt as a soft dependency:
@@ -386,7 +394,7 @@ if (minetest.get_modpath("simple_dialogs")) then
 end
 ```
 
-We will be adding some more here later, but this is enough for now.  
+We will be adding some more here later, but this is enough for now.
 
 ### Add simple_dialog controls to the NPC right click menu
 
@@ -402,7 +410,7 @@ Just add the simple_dialogs right click menu, something like this:
     self.id=set_npc_id(self)  --you must set self.id to some kind of unique string for simple_dialogs to work
 ...
   -- if simple_dialogs is present, then show right click menus
-  if useDialogs=="Y" then 
+  if useDialogs=="Y" then
     if self.owner and self.owner == name then
       simple_dialogs.show_dialog_controls_formspec(name,self)
     else simple_dialogs.show_dialog_formspec(name,self)
@@ -449,11 +457,11 @@ Our final on_rightclick function looks very similar to the one where we did not 
       minetest.show_formspec(name, "mobs_npc:controls", get_npc_controls_formspec(name,self) )
     elseif useDialogs=="Y" then simple_dialogs.show_dialog_formspec(name,self)
     end
-```    
+```
 
 ### register a var loader
 
-This next step is enitrely optional.  If there are any entity mod variables you want to make available within simple_dialogs, you will need to register a varloader function.  And within that varloader function, call simple_dialogs.save_dialog_var to save the value into the npc simple_dialogs variable list.  
+This next step is enitrely optional.  If there are any entity mod variables you want to make available within simple_dialogs, you will need to register a varloader function.  And within that varloader function, call simple_dialogs.save_dialog_var to save the value into the npc simple_dialogs variable list.
 
 Here is an example, note that we placed it within the same paragraph where we previously set the useDialogs flag.
 
@@ -509,9 +517,13 @@ if (minetest.get_modpath("simple_dialogs")) then
 <i>end --if simple_dialogs</i>
 </pre>
 
-Another good example of a hook might be to initiate a trade dialog.  Or even to switch the npc into hostile mode and cause it to start attacking.  
-simple_dialogs do not allow players to actually change anything outside of the dialog itself.  Which makes it quite secure.  Hooks let the entity mob give npcs more interactive things they can do.  But the security of that function rest entirely upon the entity mod.  
+Another good example of a hook might be to initiate a trade dialog.  Or even to switch the npc into hostile mode and cause it to start attacking.
+simple_dialogs do not allow players to actually change anything outside of the dialog itself.  Which makes it quite secure.  Hooks let the entity mob give npcs more interactive things they can do.  But the security of that function rest entirely upon the entity mod.
 Hooks can be designed to either terminate a dialog when done, or to let it continue.
+
+And that is all there is to it!
+
+Simple_Dialogs has already been integrated with TenPlus1's mobs_npc mod: ![](https://notabug.org/TenPlus1/mobs_npc), so that is an excellent place to look for an example.
 
 ---
 ---
@@ -539,15 +551,13 @@ I considered adding a "comment" indicator.  It would be very easy, but I'm not c
 
 The formspec is functional, but rather boring.  If someone wanted to help me spice it up I would be grateful.
 
-Lots of testing and feedback would be greatly appreciated.
+Lots of testing and feedback would be greatly appreciated.  It is, of course, VITALLY important that no malformed dialog be able to crash the server.
 
 ## Credit Where Credit Is Due
 
 I was about half-way through this project, and struggling with the gui.  I wanted the player to be able to see the npc while they were talking to them.  This required either putting the formspec on one side, which left it more narrow than I wanted for replies.  Or I could stretch the dialog formspec across the bottom half of the screen, which was great for replies, but didn't look very good for the npc's part of the dialog.
 
-So, I decided to take a break and log on to a multi-player minetest server and just PLAY for a while.  I had been on the "Your Land" server in the past, but only briefly.  This time I spent a bit more time exploring and discovered that they already had npc's with dialogs!  Theirs, I believe, operate via a lua api, so I think they are very different from this code. 
-The one thing I DID notice, was their gui.  They were using a transparent background for the formspec so that they could have the npc dialog part of the formspec off to one side, and the replies down below.  I didn't even know that was POSSIBLE.  So, I went back to work on my mod, figured out (with some help on the forum) how to do a formspec with a transparent background, and thus you get the formspec in it's current form.
-I've never seen the code for the npcs that is used on Your Land, and I don't even know who the coder is that I should credit, but I definitly borrowed a design element from them, and so, Thank you!
+So, I decided to take a break and log on to a multi-player minetest server and just PLAY for a while.  I had been on the "Your Land" server in the past, but only briefly.  This time I spent a bit more time exploring and discovered that they already had npc's with dialogs!  Theirs, I believe, operate via a lua api, so I think they are very different from this code.  But one thing I really notice, was their gui.  They were using a transparent background for the formspec so that they could have the npc dialog part of the formspec off to one side, and the replies down below.  I didn't even know that was POSSIBLE.  So, I went back to work on my mod, figured out (with some help on the forum) how to do a formspec with a transparent background, and thus you get the formspec in it's current form. I've never seen the code for the npcs that is used on Your Land, and I don't even know who the coder is that I should credit, but I definitly borrowed a design element from them, and so, Thank you!
 
 ## License
 This code is licensed under the MIT License
