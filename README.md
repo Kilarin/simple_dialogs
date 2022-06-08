@@ -363,6 +363,7 @@ When you want to replace a variable with it's value, use at brackets.
 
 Combining topics, commands, and replies can allow you to create some really complex simple_dialogs.  (yes, just wallow in the oxymoron and enjoy it!)
 You can find some example dialog scripts in the simple_dialogs mod folder.  They are all have names in the format of sd-*.txt
+
 <https://github.com/Kilarin/simple_dialogs>
 <https://github.com/Kilarin/simple_dialogs>
 <https://github.com/Kilarin/simple_dialogs/blob/main/sd-guard.txt>
