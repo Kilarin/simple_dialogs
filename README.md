@@ -19,7 +19,7 @@ Simple Dialogs allows you to create conversation trees (dialogs) for any entity.
 
 This means that any player who has ownership of an npc can create their own customized dialogs for that npc.  A player building a shop can write a dialog for the npc shop keeper.  A player who builds a huge castle can craft their own custom dialog for the guard at the gate to tell people about the castle.  AND, since the control mechanisim is just text, the players have no direct lua access, avoiding some security risks.
 
-Of course, dialogs can be used by the server owner/game designer as well.  They can create individually customized dialogs for npcs in the same manner that any player can.  BUT, they can also add text file containing a dialog to the game folder, and have it automatically uploaded to specific kinds of entities whenever they are spawned.
+Of course, dialogs can be used by the server owner/game designer as well.  They can create individually customized dialogs for npcs in the same manner that any player can.  BUT, they can also add a text file containing a dialog to the game folder, and have it automatically uploaded to specific kinds of entities whenever they are spawned.
 
 So, how does all of this work?  The heart and key to simple dialogs is the dialog control text.  Which, at it's simplist, looks something like this:
 
