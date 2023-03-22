@@ -1,3 +1,4 @@
+--*** version 0.2 ***
 simple_dialogs = { }
 
 local S = simple_dialogs.intllib  --TODO: ensure integration with intllib is working properly, I dont think it is now
@@ -1361,12 +1362,19 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	if fields["reply"] then 
 		--minetest.log("simple_dialogs->sss got back reply!"..dump(fields["reply"]))
 		local r=tonumber(string.sub(fields["reply"],5))
-		--if npcself.dialog.dlg[topic][subtopic].reply[r].target == "END" then
-		--	minetest.close_formspec(playername, "simple_dialogs:dialog")
-		--else
+		--minetest.log("topic="..topic.." subtopic="..subtopic.." r="..r.."<")
+		--minetest.log("newtopic=npcself.dialog.dlg[topic][subtopic]="..dump(npcself.dialog.dlg[topic][subtopic]))
+		--this may seem incredibly paranoid, BUT, one server crashed here with "attempt to index a nil value"
+		--which can only happen if r is out of range.  Which should NOT be able to happen.  No idea how it did,
+		--but this will ensure that it can't cause a server crash anyway.
+		if    npcself.dialog.dlg[topic][subtopic].reply[r]
+			and npcself.dialog.dlg[topic][subtopic].reply[r].target then
 			local newtopic=npcself.dialog.dlg[topic][subtopic].reply[r].target
-			 simple_dialogs.show_dialog_formspec(playername,npcself,newtopic)
-		--end
+			simple_dialogs.show_dialog_formspec(playername,npcself,newtopic)
+		else
+			minetest.log("simple_dialogs ERROR in receive_fields (topic="..topic.." subtopc="..subtopic..") r="..r.." is invalid")
+			minetest.close_formspec(playername, "simple_dialogs:dialog")
+		end
 	end
 end) --register_on_player_receive_fields dialog
 
