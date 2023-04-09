@@ -329,7 +329,7 @@ Are you in my friendlist? YesNo(isinlist(FriendList,@[playername]@))
 timeOfDay() returns a value of hours.millihours
 so 5:30 will be returned as 5.50 and 15:45 will be returned as 15.75
 timeOfDay(NIGHTORDAY) or timeOfDay(DAYORNIGHT) will return 0 for night, and 1 for day
-The function defines day as begining at 4.75 (4:45) when the sun rises
+The function defines day as beginning at 4.75 (4:45) when the sun rises
 and day as ending at 19.36 (19:22) when the sun sets
 
 
