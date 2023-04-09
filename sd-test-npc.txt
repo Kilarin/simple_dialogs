@@ -315,6 +315,10 @@ yesno (isinlist (petlist,cat))=yesno(isinlist(petlist,cat))
 yesno (isinlist (petlist,hippo))=yesno(isinlist(petlist,hippo))
 calc (2*(12/4)+1)=calc(2*(12/4)+1)
 calc (@[brackets1]@gold@[brackets2]@*2)=calc(@[gold]@*2)
+timeofday ()= timeofday()
+timeofday (hours)= timeofday(hours) same as timeofday ()
+timeofday (dayornight) = timeofday(dayornight)
+timeofday (nightorday) = timeofday(nightorday) same as dayornight
 :set petlist=|dog|cat|mouse|parakeet|
 :set gold=42
 :set ranfunctions=*
@@ -388,6 +392,9 @@ All of this should be ignored and none of it should cause a crash
 :if (1=1) then set x=bad operator
 :if (1==1) then
 :if (1==1) set x=no then
+:if timeofday(nightorday)=0 then set x=good example
+:if timeofday(allskjfl)=0 then set x=dont crash on bad parameter
+:if timeofday(1,2,3)=1 then set x=dont crash on multiple parameters
 :goto
 :goto topicdoesnotexist
 :set test=exists(

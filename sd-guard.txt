@@ -55,7 +55,7 @@ You?  Well, I mean.  They didn't exactly give me a list of names.   I do know yo
 
 ===One More Shout
 "YOU SHALL NOT PASS!!!!"
-Except, yeah, you kind of can.  Don't tell anyone I let you bye!
+Except, yeah, you kind of can.  Don't tell anyone I let you by!
 >end:Good bye!
 
 

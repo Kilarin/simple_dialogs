@@ -1,4 +1,4 @@
---*** version 0.2 ***
+--*** version 0.3 ***
 simple_dialogs = { }
 
 local S = simple_dialogs.intllib  --TODO: ensure integration with intllib is working properly, I dont think it is now
@@ -966,7 +966,23 @@ func splitter
 --]]
 
 
-
+--this finds all the occurances of a specific function in a line.
+--So, for example:
+--func_splitter("the time is timeofday() or timeofday(hours) or timeofday(dayornight,24)","TIMEOFDAY",2)
+--               1234567890123456789012345678901234567890123456789012345678901234567890
+--will return a grouping.list of length 3
+--grouping.list[1] will be the timeofday() at pos 13, and grouping.list[1].parm will be an empty list
+--grouping.list[2] will be the timeofday(hour) at pos 28, and grouping.list[2].parm will contain 1 item, "hours"
+--grouping.list[3] will be the timeofday(dayornight,24) at pos 38, and grouping.list[3].parm will be a list of 2 items, "dayornight" and 24
+--so the proper way to check if func_splitter found your function and to process it is like this:
+--local grouping=simple_dialogs.func_splitter(line,"CALC",1)            <-call this function
+--if grouping then                                                      <-safety, dont want to crash the server
+--	for g=1,#grouping.list,1 do                                         <-loop through instances found, will abort on 0, of course
+--		local mth=grouping.list[g].parm[1]                                <-get any parameters you need.
+--		mth=simple_dialogs.calc_filter(mth)                               <-process
+--		line=simple_dialogs.grouping_replace(grouping,g,mth,"INCLUSIVE")  <-replace the function with the new value
+--	end --for
+--end --if grouping CALC
 function simple_dialogs.func_splitter(line,funcname,parmcount)
 	--minetest.log("simple_dialogs->fs--------------- funcname="..funcname.." line="..line)
 	if not parmcount then parmcount=1 end
@@ -1157,7 +1173,7 @@ function simple_dialogs.populate_funcs(npcself,line,playername)
 			end --for
 		end --if grouping CALC
 		--ADD  add(variable,stringtoadd)
-		local grouping=simple_dialogs.func_splitter(line,"ADD",2)
+		grouping=simple_dialogs.func_splitter(line,"ADD",2)
 		if grouping then
 			--minetest.log("simple_dialogs->pf add #grouping.list="..#grouping.list)
 			for g=1,#grouping.list,1 do
@@ -1200,6 +1216,9 @@ function simple_dialogs.populate_funcs(npcself,line,playername)
 		--isNotSet(varname) returns true if the variable does NOT exist in the list, or is empty, false if it does
 		grouping=simple_dialogs.func_splitter(line,"ISNOTSET",1)
 		line=simple_dialogs.is_set(npcself,grouping,"NOT",line)
+		--timeofday() timeofday(hours) timeofday(dayornight)
+		grouping=simple_dialogs.func_splitter(line,"TIMEOFDAY",1)
+		line=simple_dialogs.time_of_day(npcself,grouping,line)
 		--YesNo(func())  YesNo turn 0 or N into No and 1 or Y into Yes (for display purposes)
 		--do NOT use YesNo in a :if!!!!
 		grouping=simple_dialogs.func_splitter(line,"YESNO",1)
@@ -1248,7 +1267,9 @@ end --in_list
 --when parm isornot="NOT" the result is reversed.  (1=not set, 0=set)
 --the result returned is the line passed in with the function replaced by its result
 function simple_dialogs.is_set(npcself,grouping,isornot,line)
-	--minetest.log("simple_dialogs->is vars="..dump(npcself.dialog.vars))
+	--minetest.log("simple_dialogs->is_set vars="..dump(npcself.dialog.vars))
+	--minetest.log("simple_dialogs->is_set grouping="..dump(grouping))
+	--if grouping and grouping.list and #grouping.list>0 then
 	if grouping then
 		for g=1,#grouping.list,1 do
 			local varname=grouping.list[g].parm[1]  --populate_vars should always already have happened
@@ -1277,6 +1298,36 @@ function is_or_not(rtn,isornot)
 	end --if isornot
 	return rtn
 end --is_or_not
+
+
+
+--this function executes the TimeOfDay function
+--minetest.get_timeofday()
+--time of day returns a value from 0(midnight) to 1 midnight
+		--TimeOfDay
+		--At 4.750 mh (4:45), the sun rises
+		--At 19.359 mh (~19:22), the sun square is gone
+		--TimeOfDay() or TimeOfDay(hours) hours.millihours = 0.0=midnight 0.5=0:30  8.75=08:45 etc
+		--TimeOfDay(dayornight)  0=night(19.359 to 4.749) 1=day(4.750 to 19.358)
+function simple_dialogs.time_of_day(npcself,grouping,line)
+	if grouping then
+		for g=1,#grouping.list,1 do
+			--minetest.log("simple_dialogs->time_of_day line="..line.." grouping="..dump(grouping))
+			local timeofday=math.round(minetest.get_timeofday()*2400)/100  --(2 decimals accuracy)
+			-- 0.0=midnight 4.5=4:30  8.75=08:45 15.25=15:15
+			local parm=string.upper(grouping.list[g].parm[1])  --populate_vars should always already have happened
+			--minetest.log("parm="..parm.." timeofday="..timeofday)
+			local timestr=timeofday
+			if parm=="DAYORNIGHT" or parm=="NIGHTORDAY" then 
+				if timeofday>4.750 and timeofday<19.36 then timestr="1" 
+				else timestr="0"
+				end --if day
+			end --if DAYORNIGHT
+		line=simple_dialogs.grouping_replace(grouping,g,timestr,"INCLUSIVE")
+		end --for g
+	end --if grouping
+	return line
+end --time_of_day
 
 
 
