@@ -262,9 +262,19 @@ function simple_dialogs.load_dialog_from_string(npcself,dialogstr)
 	wk.weight=1
 	wk.dlg=npcself.dialog.dlg
 	
+	--under some very unusual circumstances, a string can be pasted that has single /r 
+	--line endings instead of the standard windows /r/n or linux /n line endings.
+	--this code checks for that, and if it finds /r without /n it replaces /r with /n
+	--so the gmatch will work to find line endings
+	local r=string.find(dialogstr,"\r")
+	local n=string.find(dialogstr,"\n")
+	if r and n==nil then  --single \r line feeds were found
+		dialogstr=dialogstr:gsub("\r", "\n") --replace all single \r with \n
+	end
 	--loop through each line in the string (including blank lines) 
-	for line in (dialogstr..'\n'):gmatch'(.-)\r?\n' do 
-		--minetest.log("simple_dialogs->ldfs line="..wk.line)
+	--minetest.log("simple dialogs->ldfs dialogstr="..dialogstr)
+	for line in (dialogstr..'\n'):gmatch'(.-)\r?\n' do
+		--minetest.log("simple_dialogs->ldfs line="..line)
 		wk.line=line
 		local firstchar=string.sub(wk.line,1,1)
 		--minetest.log("simple_dialogs->ldfs firstchar="..firstchar.." #firstchar="..#firstchar)
