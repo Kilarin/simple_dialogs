@@ -153,7 +153,7 @@ function simple_dialogs.load_dialog_from_file(npcself,modname,dialogfilename)
 	local file = io.open(minetest.get_modpath(modname).."/"..dialogfilename)
 	if file then
 		local dialogstr=file:read("*all")
-		file.close()
+		file:close()
 		simple_dialogs.load_dialog_from_string(npcself,dialogstr)
 	end
 end --load_dialog_from_file
@@ -781,7 +781,7 @@ function simple_dialogs.dialog_help(playername)
 		--minetest.log("simple_dialogs-> dh if file")
 		--local help
 		local helpstr=file:read("*all")
-		file.close()
+		file:close()
 		local formspec={
 		"formspec_version[4]",
 		"size[15,15]", 
