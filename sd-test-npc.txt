@@ -1,9 +1,10 @@
 :set x=command before topic should not crash
 >reply:reply before topic should not crash
 other lines before topic should not crash
+because everything above =start is ignored.
 
 ===start
-start is just used to set up some variables
+start (in this example) is just used to set up some variables
 :set angry=Y
 :set FriendList=|superman|spiderman|batman|wonderwoman|
 :if (notexists(npcname)) then set npcname=NPC

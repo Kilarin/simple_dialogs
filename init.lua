@@ -123,7 +123,8 @@ function simple_dialogs.add_dialog_control_to_formspec(playername,npcself,formsp
 	formspec[#formspec+1]="textarea["..x..","..y..";14,4.8;dialog;"..S("Dialog")..";"..minetest.formspec_escape(dialogtext).."]"
 	formspec[#formspec+1]="button["..x2..","..y2..";1.5,0.8;dialoghelp;"..S("Dialog Help").."]"
 	formspec[#formspec+1]="button["..x3..","..y2..";1.5,0.8;save;"..S("Save").."]"
-	formspec[#formspec+1]="button["..x4..","..y2..";3,0.8;saveandtest;"..S("Save & Test").."]"
+	formspec[#formspec+1]="button["..x4..","..y2..";3,0.8;saveandtest;"..S("Save & Test (will reset variables)").."]"
+	formspec[#formspec+1]="button["..x5..","..y2..";3,0.8;test;"..S("Test (without save or reseting variables)").."]"
 	if passedInString=="YES" then
 		return formspecstr..table.concat(formspec)
 	end

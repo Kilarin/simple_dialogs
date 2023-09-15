@@ -17,6 +17,8 @@ You can also add a "weight" to a topic line if you wish, we will talk more about
 
 Following the topic will be the dialog you want the character to say.  This can be as long or as short as you wish.  Just don't start any lines with "=", ":", or ">" in position one.
 
+NOTE: Everything BEFORE the first =START topic will be ignored.  If you want to set variables before the beginning of your dialog, set them in the =START topic, and then use :goto begin  (or whatever you want to name the first visible dialog) to direct to the beginning 
+
 ## REPLIES
 
 After the dialog will come the replies.  Replies all start with a greater than sign ">" in position one.  Followed by a target, followed by a colon, then by the text of the reply.  The target is the dialog topic you want to go to next.
@@ -131,6 +133,10 @@ Hello @[playername]@.  I am the wizard Fladnag.  I forsaw that you would come to
 
 When the above dialog is displayed @[playername]@ will be replaced by the actual playername.
 
+### Variable persistence
+* Variables for each npc will persist between different dialog sessions.  See notes on the command SET for details on how to make variables player specific.
+* Whenever you click the "Save & Test" button, the dialog is rebuilt, and all the variables are reset.  In order to test variables that should persist between dialog sessions, use the "Test (without save or resetting variables)" button.
+
 ## COMMANDS
 
 For more advanced simple_dialogs you can add commands.  commands start with a colon ":" in position one.  Commands can be anywhere within the topic that makes sense to you.  I usually put them between the dialog and the replies.  They will be executed in the order they appear, BEFORE anything else is displayed.  So you can set any variables in commands and expect them to be populated correctly in that topics dialog or replies.
@@ -160,6 +166,7 @@ sets a variable "trust" that would be DIFFERENT for every player.  For example, 
 To access the content of that variable you would use this format:
 @[@[playername]@.trust]@  (it will process the inner brackets first and populate the playername, then process the outerbrackets and get the stored variable)
 
+Variables for an npc will persist between dialog sessions.  (see notes on variable persistence above)
 
 ### GOTO
 
@@ -343,6 +350,27 @@ And THEN execute the set command, so in the end it would actually be doing:
 
 When you want to reference a variable name, do not use at brackets.
 When you want to replace a variable with it's value, use at brackets.
+
+## Control Panel
+
+![](https://i.imgur.com/ZT0f08M.png)
+
+### Dialog box
+The control panel is pretty intuitive.  Put the text for the dialog into the Dialog box.  I strongly recommend using a text editor and just doing a copy and paste into the dialog box, but you can edit the dialog directly in the dialog box if you prefer.
+
+### Dialog Help
+Displays a text version of help for dialogs
+
+### Save
+If you do not click save (or Save & Test) any changes you make to the dialog will be lost.
+Note that saving the dialog will reset any variables.
+
+### Save & Test
+This will save the dialog, and run it.  Note that saving the dialog will reset any variables.
+
+### Test (without save or reseting variables)
+Do NOT use this option if you have made changes to the dialog.  The changes will be lost.  The only reason to use this option is if you have variables that are intended to persist between dialog sessions.  This runs the dialog WITHOUT rebuilding it.  So it does NOT reset the variables, and you can test variables across multiple dialogs.
+
 
 ### CONCLUSION
 

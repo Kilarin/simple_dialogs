@@ -15,13 +15,13 @@ TenPlus1 has very generously already integrated simple_dialogs into his mobs_red
 
 Simple Dialogs allows you to create conversation trees (dialogs) for any entity.  And those dialogs are created using only a simple in game text file.  No API or LUA programming required.
 
-![](https://i.imgur.com/MPfJg92.png)
+![](https://i.imgur.com/ZT0f08M.png)
 
-This means that any player who has ownership of an npc can create their own customized dialogs for that npc.  A player building a shop can write a dialog for the npc shop keeper.  A player who builds a huge castle can craft their own custom dialog for the guard at the gate to tell people about the castle.  AND, since the control mechanisim is just text, the players have no direct lua access, avoiding some security risks.
+This means that any player who has ownership of an npc can create their own customized dialogs for that npc.  A player building a shop can write a dialog for the npc shop keeper.  A player who builds a huge castle can craft their own custom dialog for the guard at the gate to tell people about the castle.  AND, since the control mechanism is just text, the players have no direct lua access, avoiding some security risks.
 
 Of course, dialogs can be used by the server owner/game designer as well.  They can create individually customized dialogs for npcs in the same manner that any player can.  BUT, they can also add a text file containing a dialog to the game folder, and have it automatically uploaded to specific kinds of entities whenever they are spawned.
 
-So, how does all of this work?  The heart and key to simple dialogs is the dialog control text.  Which, at it's simplist, looks something like this:
+So, how does all of this work?  The heart and key to simple dialogs is the dialog control text.  Which, at it's simplest, looks something like this:
 
 ```
 ===Start
@@ -34,11 +34,13 @@ What be ye doin here?  Arrrgh!  This be no fit place for land lubbers!
 ```
 ## TOPICS
 
-The dialog starts with a topic, a topic is any line that has an equal sign "=" in position one.  Every dialog file must have at least one START topic.
+The dialog starts with a topic, a topic is any line that has an equal sign "=" in position one.  Every dialog file must have at least one START topic.  
 Topics are not case sensitive, and any characters besides letters, digits, dashes, and underscores are removed.  Start, start, st art, and START will all be treated the same by simple dialogs.  This also means all equal symbols will be removed.  Every topic must start with one equal sign, I like three, I think it makes them stand out more, but it doesn't matter how many equal signs you have at the begining, as long as you have at least one, in position one.
 You can also add a "weight" to a topic line if you wish, we will talk more about that later.
 
 Following the topic will be the dialog you want the character to say.  This can be as long or as short as you wish.  Just don't start any lines with "=", ":", or ">" in position one.
+
+NOTE: Everything BEFORE the first =START topic will be ignored.  If you want to set variables before the beginning of your dialog, set them in the =START topic, and then use :goto begin  (or whatever you want to name the first visible dialog) to direct to the beginning 
 
 ## REPLIES
 
@@ -154,6 +156,10 @@ Hello @[playername]@.  I am the wizard Fladnag.  I forsaw that you would come to
 
 When the above dialog is displayed @[playername]@ will be replaced by the actual playername.
 
+### Variable persistence
+* Variables for each npc will persist between different dialog sessions.  See notes on the command SET for details on how to make variables player specific.
+* Whenever you click the "Save & Test" button, the dialog is rebuilt, and all the variables are reset.  In order to test variables that should persist between dialog sessions, use the "Test (without save or resetting variables)" button.
+
 ## COMMANDS
 
 For more advanced simple_dialogs you can add commands.  commands start with a colon ":" in position one.  Commands can be anywhere within the topic that makes sense to you.  I usually put them between the dialog and the replies.  They will be executed in the order they appear, BEFORE anything else is displayed.  So you can set any variables in commands and expect them to be populated correctly in that topics dialog or replies.
@@ -182,6 +188,8 @@ In a multiplayer game, remember that the variables for an npc are global.  If yo
 sets a variable "trust" that would be DIFFERENT for every player.  For example, if the players name is singleplayer, the actual variable set would be singleplayer.trust
 To access the content of that variable you would use this format:
 @[@[playername]@.trust]@  (it will process the inner brackets first and populate the playername, then process the outerbrackets and get the stored variable)
+
+Variables for an npc will persist between dialog sessions.  (see notes on variable persistence above)
 
 
 ### GOTO
@@ -368,7 +376,28 @@ And THEN execute the set command, so in the end it would actually be doing:
 When you want to reference a variable name, do not use at brackets.
 When you want to replace a variable with it's value, use at brackets.
 
-### CONCLUSION
+## Control Panel
+
+![](https://i.imgur.com/ZT0f08M.png)
+
+### Dialog box
+The control panel is pretty intuitive.  Put the text for the dialog into the Dialog box.  I strongly recommend using a text editor and just doing a copy and paste into the dialog box, but you can edit the dialog directly in the dialog box if you prefer.
+
+### Dialog Help
+Displays a text version of help for dialogs
+
+### Save
+If you do not click save (or Save & Test) any changes you make to the dialog will be lost.
+Note that saving the dialog will reset any variables.
+
+### Save & Test
+This will save the dialog, and run it.  Note that saving the dialog will reset any variables.
+
+### Test (without save or reseting variables)
+Do NOT use this option if you have made changes to the dialog.  The changes will be lost.  The only reason to use this option is if you have variables that are intended to persist between dialog sessions.  This runs the dialog WITHOUT rebuilding it.  So it does NOT reset the variables, and you can test variables across multiple dialogs.
+
+
+## CONCLUSION
 
 Combining topics, commands, and replies can allow you to create some really complex simple_dialogs.  (yes, just wallow in the oxymoron and enjoy it!)
 You can find some example dialog scripts in the simple_dialogs mod folder.  They are all have names in the format of sd-*.txt
@@ -573,4 +602,5 @@ So, I decided to take a break and log on to a multi-player minetest server and j
 
 ## License
 This code is licensed under the MIT License
+
 

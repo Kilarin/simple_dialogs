@@ -1,8 +1,9 @@
  this is an example of a more advanced dialog that makes use of commands, variables, and functions.
+ (everything above start are just comments and are ignored)
 
 ===Start
 this dialog will never be shown
-start is just used to set some variables
+start (in this example) is just used to set some variables
 :set myname=Calico Jack
 :if (isset(npcname)) then set myname=@[npcname]@
 :goto intro
