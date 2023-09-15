@@ -113,6 +113,7 @@ function simple_dialogs.add_dialog_control_to_formspec(playername,npcself,formsp
 	local y2=y+5
 	local x3=x2+2
 	local x4=x3+2
+	local x5=x4+3.5
 	local formspecstr=""
 	local passedInString="NO"
 	if type(formspec)=="string" then
@@ -139,7 +140,7 @@ function simple_dialogs.process_simple_dialog_control_fields(playername,npcself,
 	if fields["save"] or fields["saveandtest"] then
 		simple_dialogs.load_dialog_from_string(npcself,fields["dialog"])
 	end --save or saveandtest
-	if fields["saveandtest"] then
+	if fields["saveandtest"] or fields["test"] then
 		simple_dialogs.show_dialog_formspec(playername,npcself,"START")
 	elseif fields["dialoghelp"] then
 		--minetest.log("simple_dialogs->psdcf help")
