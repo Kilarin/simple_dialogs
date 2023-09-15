@@ -1,3 +1,6 @@
+# Simple_Dialogs for Minetest entities  
+*** version 0.31 ***
+
 So, how does all of this work?  The heart and key to simple dialogs is the dialog control text.  Which, at it's simplist, looks something like this:
 
 --------------------

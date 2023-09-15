@@ -1,5 +1,5 @@
 # Simple_Dialogs for Minetest entities
-*** version 0.3 ***
+*** version 0.31 ***
 
 By Kilarin
 

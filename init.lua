@@ -1,4 +1,4 @@
---*** version 0.3 ***
+--*** version 0.31 ***
 simple_dialogs = { }
 
 local S = simple_dialogs.intllib  --TODO: ensure integration with intllib is working properly, I dont think it is now
