@@ -1448,7 +1448,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		--this may seem incredibly paranoid, BUT, one server crashed here with "attempt to index a nil value"
 		--which can only happen if r is out of range.  Which should NOT be able to happen.  No idea how it did,
 		--but this will ensure that it can't cause a server crash anyway.
-		minetest.log("action", "simple_dialogs->got reply, current formspec_state: " .. dump(formspec_state[playername]))
+		-- minetest.log("action", "simple_dialogs->got reply, current formspec_state: " .. dump(formspec_state[playername]))
 		if    npcself.dialog.dlg[topic][subtopic].reply[r]
 			and npcself.dialog.dlg[topic][subtopic].reply[r].target then
 			local newtopic=npcself.dialog.dlg[topic][subtopic].reply[r].target
