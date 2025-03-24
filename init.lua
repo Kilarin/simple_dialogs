@@ -166,13 +166,22 @@ end --load_dialog_from_file
 -- the dialog formspec is the formspec where someone talks to the npc --
 ------------------------------------------------------------------------
 
+-- Add a table to track the formspec state for each player
+local formspec_state = {}
 
 --this will be used to display the actual dialog to a player interacting with the npc
 --normally displayed to someone who is NOT the entity owner
 --call with topic=START for starting a dialog, or with no topic and it will default to start.
 function simple_dialogs.show_dialog_formspec(playername,npcself,topic)
+	if not formspec_state[playername] then
+		formspec_state[playername] = ""
+	end
+    -- Check if the formspec is already being displayed or is in the process of being closed
+	-- minetest.log("action", "formspec_state[playername] = " .. dump(formspec_state[playername]))
+
 	--only show the dialog formspec if there is a dialog
 	if npcself and npcself.dialog and npcself.dialog.dlg and npcself.dialog.text and npcself.dialog.text~="" then 
+
 		if not topic then topic="START" end
 		contextdlg[playername]={}
 		contextdlg[playername].npcId=simple_dialogs.set_npc_id(npcself) --store the npc id in local context so we can use it when the form is returned.  (cant store self)
@@ -187,7 +196,14 @@ function simple_dialogs.show_dialog_formspec(playername,npcself,topic)
 			simple_dialogs.dialog_to_formspec(playername,npcself,topic)
 		}
 		formspec=table.concat(formspec,"")
+		-- minetest.log("action", "Showing formspec for player: " .. playername .. ", formspec name: simple_dialogs:dialog, formspec_state: " .. formspec_state[playername])
+		if formspec_state[playername] == "closing" then
+			minetest.log("action", "Closing formspec " .. playername)
+			formspec_state[playername] = nil
+			return
+		end
 		minetest.show_formspec(playername,"simple_dialogs:dialog",formspec)
+		formspec_state[playername] = "open"
 	end
 end --show_dialog_formspec
 
@@ -510,6 +526,7 @@ function simple_dialogs.dialog_to_formspec(playername,npcself,topic)
 		--this check has to be inside the repeat to catch topics changed by goto
 		if gototopic.topic and gototopic.topic=="END" then 
 			minetest.close_formspec(playername, "simple_dialogs:dialog")
+			formspec_state[playername] = "closing"
 			return ""
 		elseif not npcself.dialog.dlg[topic] then return errlabel.. " topic "..topic.." not found in the dialog]" 
 		end 
@@ -1364,6 +1381,7 @@ minetest.register_on_leaveplayer(function(player)
 	local name = player:get_player_name()
 	contextctr[name] = nil
 	contextdlg[name] = nil 
+	formspec_state[name] = nil
 end)--register_on_leaveplayer
 
 
@@ -1396,7 +1414,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		--and that can be from a DIFFERENT mod where I cannot predict the name
 		return 
 	end
-	--minetest.log("simple_dialogs->receive_fields dialog: fields="..dump(fields))
+	minetest.log("simple_dialogs->receive_fields dialog: fields="..dump(fields))
 	if   not contextdlg[playername] 
 		or not contextdlg[playername].npcId 
 		or not contextdlg[playername].topic 
@@ -1423,13 +1441,14 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	--
 	--incoming reply fields look like: fields={ ["reply"] = CHG:1,}
 	if fields["reply"] then 
-		--minetest.log("simple_dialogs->sss got back reply!"..dump(fields["reply"]))
+		-- minetest.log("simple_dialogs->sss got back reply!"..dump(fields["reply"]))
 		local r=tonumber(string.sub(fields["reply"],5))
-		--minetest.log("topic="..topic.." subtopic="..subtopic.." r="..r.."<")
-		--minetest.log("newtopic=npcself.dialog.dlg[topic][subtopic]="..dump(npcself.dialog.dlg[topic][subtopic]))
+		-- minetest.log("topic="..topic.." subtopic="..subtopic.." r="..r.."<")
+		-- minetest.log("newtopic=npcself.dialog.dlg[topic][subtopic]="..dump(npcself.dialog.dlg[topic][subtopic]))
 		--this may seem incredibly paranoid, BUT, one server crashed here with "attempt to index a nil value"
 		--which can only happen if r is out of range.  Which should NOT be able to happen.  No idea how it did,
 		--but this will ensure that it can't cause a server crash anyway.
+		minetest.log("action", "simple_dialogs->got reply, current formspec_state: " .. dump(formspec_state[playername]))
 		if    npcself.dialog.dlg[topic][subtopic].reply[r]
 			and npcself.dialog.dlg[topic][subtopic].reply[r].target then
 			local newtopic=npcself.dialog.dlg[topic][subtopic].reply[r].target
@@ -1437,6 +1456,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		else
 			minetest.log("simple_dialogs ERROR in receive_fields (topic="..topic.." subtopc="..subtopic..") r="..r.." is invalid")
 			minetest.close_formspec(playername, "simple_dialogs:dialog")
+		    formspec_state[playername] = "closing"
 		end
 	end
 end) --register_on_player_receive_fields dialog
