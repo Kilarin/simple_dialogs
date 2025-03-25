@@ -173,6 +173,7 @@ local formspec_state = {}
 --normally displayed to someone who is NOT the entity owner
 --call with topic=START for starting a dialog, or with no topic and it will default to start.
 function simple_dialogs.show_dialog_formspec(playername,npcself,topic)
+	-- formspec_state should not be nil, but it cannot be set to open/closing here.
 	if not formspec_state[playername] then
 		formspec_state[playername] = ""
 	end
@@ -198,7 +199,6 @@ function simple_dialogs.show_dialog_formspec(playername,npcself,topic)
 		formspec=table.concat(formspec,"")
 		-- minetest.log("action", "Showing formspec for player: " .. playername .. ", formspec name: simple_dialogs:dialog, formspec_state: " .. formspec_state[playername])
 		if formspec_state[playername] == "closing" then
-			minetest.log("action", "Closing formspec " .. playername)
 			formspec_state[playername] = nil
 			return
 		end
